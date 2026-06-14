@@ -1,0 +1,17 @@
+node_modules/
+dist/
+dist-server/
+coverage/
+playwright-report/
+test-results/
+data/*.sqlite
+data/*.sqlite-*
+backups/
+.cache/
+dev-output.log
+dev-error.log
+server-output.log
+server-error.log
+.env
+*.log
+docs

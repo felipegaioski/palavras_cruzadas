@@ -1,0 +1,47 @@
+{
+  "name": "palavras-cruzadas",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18.8"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n API,WEB -c blue,green \"tsx watch src/server/index.ts\" \"vite\"",
+    "build": "tsc -p tsconfig.server.json && vite build",
+    "start": "node dist-server/server/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "db:generate": "drizzle-kit generate",
+    "check": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit"
+  },
+  "dependencies": {
+    "@fastify/static": "7.0.4",
+    "better-sqlite3": "11.10.0",
+    "drizzle-orm": "0.44.2",
+    "fastify": "4.29.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "6.30.1",
+    "zustand": "5.0.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.52.0",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.1.0",
+    "@testing-library/user-event": "14.5.2",
+    "@types/better-sqlite3": "7.6.13",
+    "@types/node": "22.15.30",
+    "@types/react": "18.3.23",
+    "@types/react-dom": "18.3.7",
+    "@vitejs/plugin-react": "4.5.2",
+    "concurrently": "9.1.2",
+    "drizzle-kit": "0.31.1",
+    "jsdom": "25.0.1",
+    "tsx": "4.20.3",
+    "typescript": "5.8.3",
+    "vite": "5.4.19",
+    "vitest": "2.1.9"
+  }
+}
