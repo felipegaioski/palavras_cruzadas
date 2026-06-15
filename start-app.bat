@@ -20,7 +20,7 @@ if defined NODE_DIR (
 :: Valida se o Node.js está acessível (seja global ou via NODE_DIR)
 where node >nul 2>nul
 if errorlevel 1 (
-    echo [Erro] Node.js nao foi encontrado no sistema (Global) nem via configuracao local.
+    echo [Erro] Node.js nao foi encontrado no sistema 'Global' nem via configuracao local.
     echo Por favor, instale o Node.js ou configure a variavel NODE_DIR dentro deste script.
     pause
     exit /b 1
