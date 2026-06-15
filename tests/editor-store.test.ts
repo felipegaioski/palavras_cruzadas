@@ -96,4 +96,35 @@ describe("estado do editor", () => {
         ?.answer
     ).toBe("ZB");
   });
+
+  it("preenche dois caracteres ao atravessar uma célula diagonal", () => {
+    const store = useEditorStore.getState();
+    store.setTool("clue");
+    store.applyToolAt(2, 1);
+    const clue = useEditorStore.getState().crossword!.areas.find(
+      (area) => area.row === 2 && area.column === 1
+    )!;
+    const diagonal = useEditorStore.getState().crossword!.areas.find(
+      (area) => area.row === 2 && area.column === 2
+    )!;
+
+    useEditorStore.getState().setTool("answer");
+    useEditorStore.getState().applyToolAt(2, 2);
+    useEditorStore.getState().setTool("diagonal");
+    useEditorStore.getState().applyToolAt(2, 2);
+    useEditorStore
+      .getState()
+      .upsertWord(clue.clueRegions[0].id, "ABC", "right", "right");
+
+    const current = useEditorStore.getState().crossword!;
+    expect(current.areas.find((area) => area.id === diagonal.id)?.content).toBe("AB");
+    expect(
+      current.areas.find((area) => area.row === 2 && area.column === 3)?.content
+    ).toBe("C");
+    expect(current.words[0].cells).toEqual([
+      { row: 2, column: 2 },
+      { row: 2, column: 2 },
+      { row: 2, column: 3 }
+    ]);
+  });
 });

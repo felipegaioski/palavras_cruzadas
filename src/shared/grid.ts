@@ -67,6 +67,12 @@ export function normalizeAnswer(answer: string): string {
   return answer.trim().toLocaleUpperCase("pt-BR");
 }
 
+export function answerUnits(answer: string, kind: Crossword["kind"]): string[] {
+  return kind === "syllabic"
+    ? answer.split(/\s*-\s*|\s+/).filter(Boolean)
+    : Array.from(normalizeAnswer(answer).replace(/\s/g, ""));
+}
+
 export function stepFor(direction: Direction): CellCoordinate {
   switch (direction) {
     case "up":
@@ -104,15 +110,17 @@ export function buildWordCells(
   direction: Direction,
   length: number,
   rows: number,
-  columns: number
+  columns: number,
+  areas: Area[] = [],
+  kind: Crossword["kind"] = "direct"
 ): CellCoordinate[] {
   const first = firstCellFromArea(area, startSide);
   const step = stepFor(direction);
   const cells: CellCoordinate[] = [];
-  for (let index = 0; index < length; index += 1) {
+  for (let offset = 0; cells.length < length; offset += 1) {
     const cell = {
-      row: first.row + step.row * index,
-      column: first.column + step.column * index
+      row: first.row + step.row * offset,
+      column: first.column + step.column * offset
     };
     if (
       cell.row < 0 ||
@@ -123,6 +131,10 @@ export function buildWordCells(
       break;
     }
     cells.push(cell);
+    const target = findAreaAt(areas, cell.row, cell.column);
+    if (kind !== "syllabic" && target?.diagonal && cells.length < length) {
+      cells.push({ ...cell });
+    }
   }
   return cells;
 }
@@ -131,7 +143,7 @@ export function wordState(
   word: Word,
   crossword: Pick<Crossword, "areas" | "words" | "kind">
 ): "complete" | "incomplete" | "conflict" {
-  const conflicts = findWordConflicts(crossword.words);
+  const conflicts = findWordConflicts(crossword.words, crossword.areas);
   if (conflicts.has(word.id)) return "conflict";
   const answerUnits =
     crossword.kind === "syllabic"
@@ -142,20 +154,29 @@ export function wordState(
     : "incomplete";
 }
 
-export function findWordConflicts(words: Word[]): Set<string> {
-  const values = new Map<string, { value: string; wordId: string }>();
+export function findWordConflicts(
+  words: Word[],
+  areas: Area[] = []
+): Set<string> {
+  const values = new Map<
+    string,
+    Array<{ value: string; wordId: string }>
+  >();
   const conflicts = new Set<string>();
   for (const word of words) {
     const units = Array.from(normalizeAnswer(word.answer).replace(/\s/g, ""));
     word.cells.forEach((cell, index) => {
       const key = cellKey(cell);
       const current = units[index] ?? "";
-      const previous = values.get(key);
-      if (previous && previous.value !== current) {
-        conflicts.add(previous.wordId);
+      const previous = values.get(key) ?? [];
+      const area = findAreaAt(areas, cell.row, cell.column);
+      const different = previous.filter((item) => item.value !== current);
+      if (different.length && !area?.diagonal) {
+        different.forEach((item) => conflicts.add(item.wordId));
         conflicts.add(word.id);
       } else if (current) {
-        values.set(key, { value: current, wordId: word.id });
+        previous.push({ value: current, wordId: word.id });
+        values.set(key, previous);
       }
     });
   }
@@ -170,12 +191,29 @@ export function responseValues(crossword: Crossword): Map<string, string> {
     }
   }
   for (const word of crossword.words) {
-    const units =
-      crossword.kind === "syllabic"
-        ? word.answer.split(/\s*-\s*|\s+/).filter(Boolean)
-        : Array.from(normalizeAnswer(word.answer).replace(/\s/g, ""));
+    const units = answerUnits(word.answer, crossword.kind);
+    const diagonalOccurrences = new Map<string, number>();
     word.cells.forEach((cell, index) => {
-      if (units[index]) result.set(cellKey(cell), units[index]);
+      if (!units[index]) return;
+      const key = cellKey(cell);
+      const area = findAreaAt(crossword.areas, cell.row, cell.column);
+      const current = result.get(key) ?? "";
+      if (area?.diagonal) {
+        const letters = Array.from(current.padEnd(2, " "));
+        const occurrence = diagonalOccurrences.get(key) ?? 0;
+        const repeatedInWord =
+          word.cells.filter((item) => cellKey(item) === key).length > 1;
+        const letterIndex = repeatedInWord
+          ? occurrence
+          : word.direction === "up" || word.direction === "down"
+            ? 0
+            : 1;
+        letters[letterIndex] = units[index];
+        result.set(key, letters.join("").trimEnd());
+        diagonalOccurrences.set(key, occurrence + 1);
+      } else if (!current) {
+        result.set(key, units[index]);
+      }
     });
   }
   return result;

@@ -319,6 +319,41 @@ legend {
   color: var(--green-dark);
 }
 
+.hero-actions {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.shutdown-button {
+  min-height: 44px;
+  border: 1px solid rgb(255 255 255 / 45%);
+  border-radius: 10px;
+  background: transparent;
+  color: white;
+  padding: 9px 14px;
+  font-weight: 800;
+}
+
+.shutdown-button:hover {
+  background: rgb(255 255 255 / 10%);
+}
+
+.header-actions .shutdown-button {
+  border-color: #d9aaa7;
+  color: var(--red);
+}
+
+.shutdown-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  align-content: center;
+  background: var(--cream);
+  color: var(--ink);
+  text-align: center;
+}
+
 .library-section {
   width: min(1240px, calc(100% - 40px));
   margin: 0 auto;
@@ -644,6 +679,34 @@ legend {
   font-size: 0.82rem;
 }
 
+.canvas-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.zoom-controls button {
+  min-width: 36px;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  font-weight: 800;
+}
+
+.zoom-controls span {
+  min-width: 48px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
 .grid-scroll {
   display: grid;
   min-height: 450px;
@@ -660,6 +723,16 @@ legend {
   background-position: 0 0, 0 6px, 6px -6px, -6px 0;
   background-size: 12px 12px;
   padding: 26px;
+}
+
+.grid-zoom {
+  min-width: 280px;
+  transition: width 120ms ease;
+}
+
+.grid-zoom .crossword-grid {
+  width: 100%;
+  max-width: none;
 }
 
 .crossword-grid {
@@ -716,7 +789,7 @@ legend {
 }
 
 .clue-text {
-  display: -webkit-box;
+  display: flex;
   overflow: hidden;
   width: 100%;
   height: 100%;
@@ -730,8 +803,8 @@ legend {
   line-height: 1.08;
   text-align: center;
   overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 5;
+  align-items: center;
+  justify-content: center;
 }
 
 .answer {
@@ -745,6 +818,16 @@ legend {
   font-size: 15px;
 }
 
+.answer.diagonal-answer {
+  font-size: 20px;
+}
+
+.answer-clue-block {
+  fill: #111;
+  stroke: #111;
+  stroke-width: 1;
+}
+
 .diagonal {
   stroke: #344039;
   stroke-width: 1.5;
@@ -756,7 +839,7 @@ legend {
   stroke: #111;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.8;
+  stroke-width: 1.5;
   color: #111;
   pointer-events: none;
   vector-effect: non-scaling-stroke;
@@ -859,6 +942,36 @@ legend {
 .property-section h3 {
   margin: 0;
   font-size: 0.96rem;
+}
+
+.division-toggle {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 10px;
+  background: #eeeee8;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.division-toggle span,
+.division-toggle strong,
+.division-toggle small {
+  display: block;
+}
+
+.division-toggle small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.division-toggle input {
+  width: 42px;
+  min-height: 24px;
+  accent-color: var(--green);
 }
 
 .fit-warning {
@@ -1055,6 +1168,42 @@ legend {
   overflow: auto;
 }
 
+.print-picker {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f7f6f1;
+  padding: 9px;
+}
+
+.print-picker-actions {
+  display: flex;
+  justify-content: space-between;
+}
+
+.print-picker-actions button {
+  min-height: 34px;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.selected-print-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.selected-print-summary span {
+  border-radius: 999px;
+  background: var(--green-soft);
+  padding: 5px 8px;
+  font-size: 0.72rem;
+}
+
 .print-selection-list label,
 .radio-line {
   display: flex;
@@ -1104,14 +1253,20 @@ legend {
   padding: 12mm;
 }
 
-.orientation-landscape .paper-page {
+.paper-page.paper-landscape {
   width: 297mm;
   min-height: 210mm;
+  height: 210mm;
 }
 
 .per-page-2 .paper-page {
   grid-template-columns: 1fr;
   grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.per-page-2 .paper-page.paper-landscape {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: 1fr;
 }
 
 .per-page-4 .paper-page {
@@ -1290,7 +1445,7 @@ legend {
     break-after: page;
   }
 
-  .orientation-landscape .paper-page {
+  .paper-page.paper-landscape {
     width: 297mm;
     height: 210mm;
   }

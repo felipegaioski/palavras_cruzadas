@@ -14,21 +14,22 @@ type PerPage = 1 | 2 | 4;
 
 export function PrintPage() {
   const [params] = useSearchParams();
-  const initialIds = params
-    .get("ids")
-    ?.split(",")
-    .map(Number)
-    .filter(Boolean) ?? [];
+  const initialIds =
+    params.get("ids")?.split(",").map(Number).filter(Boolean) ?? [];
   const [items, setItems] = useState<CrosswordSummary[]>([]);
   const [selected, setSelected] = useState<number[]>(initialIds);
   const [crosswords, setCrosswords] = useState<Crossword[]>([]);
   const [mode, setMode] = useState<PrintMode>("activity");
   const [orientation, setOrientation] = useState<Orientation>("portrait");
   const [perPage, setPerPage] = useState<PerPage>(1);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api.list().then(setItems).catch((requestError: Error) => setError(requestError.message));
+    api.list().then(setItems).catch((requestError: Error) => {
+      setError(requestError.message);
+    });
   }, []);
 
   useEffect(() => {
@@ -44,6 +45,12 @@ export function PrintPage() {
     }
     return result;
   }, [crosswords, perPage]);
+
+  const filteredItems = items.filter((item) =>
+    item.title
+      .toLocaleLowerCase("pt-BR")
+      .includes(search.trim().toLocaleLowerCase("pt-BR"))
+  );
 
   return (
     <div className={`print-screen orientation-${orientation}`}>
@@ -68,30 +75,72 @@ export function PrintPage() {
         <aside className="print-settings no-print">
           <section>
             <h2>1. Cruzadas</h2>
-            <div className="print-selection-list">
-              {items.map((item) => (
-                <label key={item.id}>
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(item.id)}
-                    onChange={(event) =>
-                      setSelected((current) =>
-                        event.target.checked
-                          ? [...current, item.id]
-                          : current.filter((id) => id !== item.id)
-                      )
+            <button
+              className="secondary-button full"
+              onClick={() => setPickerOpen((value) => !value)}
+            >
+              {pickerOpen ? "Fechar seleção" : "Escolher cruzadas"} (
+              {selected.length})
+            </button>
+            {selected.length > 0 && (
+              <div className="selected-print-summary">
+                {items
+                  .filter((item) => selected.includes(item.id))
+                  .slice(0, 3)
+                  .map((item) => (
+                    <span key={item.id}>{item.title}</span>
+                  ))}
+                {selected.length > 3 && (
+                  <span>+ {selected.length - 3} outras</span>
+                )}
+              </div>
+            )}
+            {pickerOpen && (
+              <div className="print-picker">
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Buscar por título"
+                  aria-label="Buscar cruzadas para impressão"
+                />
+                <div className="print-picker-actions">
+                  <button
+                    onClick={() =>
+                      setSelected(items.map((item) => item.id))
                     }
-                  />
-                  <span>
-                    <strong>{item.title}</strong>
-                    <small>
-                      {KIND_LABELS[item.kind]} · {item.rows} × {item.columns}
-                    </small>
-                  </span>
-                </label>
-              ))}
-            </div>
+                  >
+                    Marcar todas
+                  </button>
+                  <button onClick={() => setSelected([])}>Limpar</button>
+                </div>
+                <div className="print-selection-list">
+                  {filteredItems.map((item) => (
+                    <label key={item.id}>
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(item.id)}
+                        onChange={(event) =>
+                          setSelected((current) =>
+                            event.target.checked
+                              ? [...current, item.id]
+                              : current.filter((id) => id !== item.id)
+                          )
+                        }
+                      />
+                      <span>
+                        <strong>{item.title}</strong>
+                        <small>
+                          {KIND_LABELS[item.kind]} · {item.rows} ×{" "}
+                          {item.columns}
+                        </small>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
+
           <section>
             <h2>2. Conteúdo</h2>
             <label className="radio-line">
@@ -113,6 +162,7 @@ export function PrintPage() {
               Gabarito com respostas
             </label>
           </section>
+
           <section>
             <h2>3. Página</h2>
             <label>
@@ -147,7 +197,10 @@ export function PrintPage() {
         <main className={`print-preview per-page-${perPage}`}>
           {pages.length ? (
             pages.map((page, pageIndex) => (
-              <section className="paper-page" key={pageIndex}>
+              <section
+                className={`paper-page paper-${orientation}`}
+                key={pageIndex}
+              >
                 {page.map((crossword) => (
                   <article className="print-crossword" key={crossword.id}>
                     <header>
@@ -155,19 +208,17 @@ export function PrintPage() {
                         <span>{KIND_LABELS[crossword.kind]}</span>
                         <h2>{crossword.title}</h2>
                       </div>
-                      <small>Nome: ______________________________</small>
                     </header>
                     <CrosswordGrid
                       crossword={crossword}
                       showAnswers={mode === "answer"}
+                      answerSheet={mode === "answer"}
                       readOnly
                     />
                     {crossword.wordBank.length > 0 && (
                       <footer className="printed-bank">
                         <strong>BANCO</strong>
-                        <span>
-                          {crossword.wordBank.join(" · ")}
-                        </span>
+                        <span>{crossword.wordBank.join(" · ")}</span>
                       </footer>
                     )}
                   </article>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
+import { ShutdownButton } from "../components/ShutdownButton";
 import {
   KIND_LABELS,
   type CrosswordSummary
@@ -57,9 +58,12 @@ export function HomePage() {
             quando estiver pronto.
           </p>
         </div>
-        <Link to="/crosswords/create" className="primary-button">
-          + Nova cruzada
-        </Link>
+        <div className="hero-actions">
+          <Link to="/crosswords/create" className="primary-button">
+            + Nova cruzada
+          </Link>
+          <ShutdownButton />
+        </div>
       </header>
 
       <section className="library-section">
@@ -93,7 +97,7 @@ export function HomePage() {
             <p>
               {search
                 ? "Tente buscar por outro nome."
-                : "Crie uma grade e vá preenchendo dicas e respostas."}
+                : "Crie uma grade e vá preenchendo enunciados e respostas."}
             </p>
             {!search && (
               <Link to="/crosswords/create" className="primary-button">

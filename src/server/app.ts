@@ -19,6 +19,12 @@ export function buildApp() {
   });
 
   app.get("/api/health", async () => ({ ok: true }));
+  app.post("/api/shutdown", async (_request, reply) => {
+    await reply.send({ ok: true });
+    setTimeout(() => {
+      void app.close().finally(() => process.exit(0));
+    }, 700);
+  });
   app.get("/api/crosswords", async (request) => {
     const query = request.query as { search?: string };
     return listCrosswords(query.search);

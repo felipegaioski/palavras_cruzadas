@@ -246,7 +246,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           selected.filter((item) => item.kind !== "empty").map((item) => item.kind)
         );
         if (contentKinds.size > 1) {
-          throw new Error("Não é possível unir dicas e respostas na mesma área.");
+          throw new Error("Não é possível unir enunciados e respostas na mesma área.");
         }
         const source = selected.find((item) => item.content) ?? selected[0];
         const kind = contentKinds.has("answer") ? "answer" : "clue";
@@ -364,7 +364,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     commit(set, (draft) => {
       const area = draft.areas.find((item) => item.id === areaId);
       if (!area) return;
-      const limit = draft.kind === "syllabic" ? 5 : 1;
+      const limit =
+        draft.kind === "syllabic" ? 5 : area.diagonal ? 2 : 1;
       const normalized =
         area.kind === "answer"
           ? content.toLocaleUpperCase("pt-BR").slice(0, limit)
@@ -375,17 +376,29 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
       if (area.kind === "answer") {
         draft.words.forEach((word) => {
-          const cellIndex = word.cells.findIndex(
-            (cell) => cell.row === area.row && cell.column === area.column
+          const cellIndexes = word.cells.flatMap((cell, index) =>
+            cell.row === area.row && cell.column === area.column ? [index] : []
           );
-          if (cellIndex < 0) return;
+          if (!cellIndexes.length) return;
           if (draft.kind === "syllabic") {
             const units = word.answer.split(/\s*-\s*|\s+/).filter(Boolean);
-            units[cellIndex] = normalized;
+            units[cellIndexes[0]] = normalized;
             word.answer = units.join(" - ");
           } else {
             const units = Array.from(word.answer.replace(/\s/g, ""));
-            units[cellIndex] = normalized;
+            if (area.diagonal && cellIndexes.length > 1) {
+              cellIndexes.forEach((cellIndex, index) => {
+                units[cellIndex] = normalized[index] ?? "";
+              });
+            } else {
+              const cellValue =
+                area.diagonal && normalized.length > 1
+                  ? normalized[
+                      word.direction === "up" || word.direction === "down" ? 0 : 1
+                    ] ?? normalized[0]
+                  : normalized;
+              units[cellIndexes[0]] = cellValue;
+            }
             word.answer = units.join("");
           }
         });
@@ -397,7 +410,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const area = draft.areas.find((item) => item.id === areaId);
       if (!area) return;
       if (contents.length < 2 || contents.length > 6) {
-        throw new Error("Escolha entre 2 e 6 dicas.");
+        throw new Error("Escolha entre 2 e 6 enunciados.");
       }
       const oldRegionIds = new Set(
         area.clueRegions.map((region) => region.id)
@@ -479,7 +492,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         item.clueRegions.some((region) => region.id === regionId)
       );
       const region = area?.clueRegions.find((item) => item.id === regionId);
-      if (!area || !region) throw new Error("Selecione uma dica.");
+      if (!area || !region) throw new Error("Selecione um enunciado.");
       const normalized = normalizeAnswer(answer);
       const units =
         draft.kind === "syllabic"
@@ -495,7 +508,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         endDirection,
         units.length,
         draft.rows,
-        draft.columns
+        draft.columns,
+        draft.areas,
+        draft.kind
       );
       if (cells.length !== units.length) {
         throw new Error("A resposta não cabe nessa direção.");
@@ -503,14 +518,32 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       for (const cell of cells) {
         const target = findAreaAt(draft.areas, cell.row, cell.column);
         if (!target || target.kind === "clue" || target.rowSpan > 1 || target.columnSpan > 1) {
-          throw new Error("A resposta encontrou uma área de dica ou unida.");
+          throw new Error("A resposta encontrou uma área de enunciado ou unida.");
         }
       }
+      const diagonalOccurrences = new Map<string, number>();
       cells.forEach((cell, index) => {
         const target = findAreaAt(draft.areas, cell.row, cell.column);
         if (target) {
           target.kind = "answer";
-          target.content = units[index];
+          if (target.diagonal) {
+            const letters = Array.from(target.content.padEnd(2, " "));
+            const key = `${cell.row}:${cell.column}`;
+            const occurrence = diagonalOccurrences.get(key) ?? 0;
+            const repeatedInWord =
+              cells.filter((item) => item.row === cell.row && item.column === cell.column)
+                .length > 1;
+            const letterIndex = repeatedInWord
+              ? occurrence
+              : endDirection === "up" || endDirection === "down"
+                ? 0
+                : 1;
+            letters[letterIndex] = units[index];
+            target.content = letters.join("").trimEnd();
+            diagonalOccurrences.set(key, occurrence + 1);
+          } else {
+            target.content = units[index];
+          }
           target.clueRegions = [];
         }
       });

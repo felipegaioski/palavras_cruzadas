@@ -41,7 +41,7 @@ function validateAreas(crossword: Crossword): void {
     }
     if (area.kind === "clue" && area.clueRegions.length) {
       if (!regionsCoverUnit(area.clueRegions.map((region) => region.polygon))) {
-        throw new Error("A divisão de uma dica não cobre toda a área.");
+        throw new Error("A divisão de um enunciado não cobre toda a área.");
       }
       for (const region of area.clueRegions) {
         for (const arrow of region.arrows) {
@@ -70,7 +70,7 @@ function validateResponseContent(
   kind: Crossword["kind"]
 ): void {
   if (area.kind !== "answer") return;
-  const limit = kind === "syllabic" ? 5 : 1;
+  const limit = kind === "syllabic" ? 5 : area.diagonal ? 2 : 1;
   if (area.content.length > limit) {
     throw new Error(
       kind === "syllabic"
@@ -101,7 +101,7 @@ function validateWords(crossword: Crossword): void {
   );
   for (const word of crossword.words) {
     if (!regionIds.has(word.clueRegionId)) {
-      throw new Error("Há uma palavra sem dica correspondente.");
+      throw new Error("Há uma palavra sem enunciado correspondente.");
     }
     if (!DIRECTIONS.includes(word.direction)) {
       throw new Error("Há uma palavra com direção inválida.");
@@ -117,7 +117,7 @@ function validateWords(crossword: Crossword): void {
       }
     }
   }
-  if (findWordConflicts(crossword.words).size > 0) {
+  if (findWordConflicts(crossword.words, crossword.areas).size > 0) {
     throw new Error("Existem respostas com letras conflitantes.");
   }
 }

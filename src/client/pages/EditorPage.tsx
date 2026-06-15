@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import { CrosswordGrid } from "../components/CrosswordGrid";
+import { ShutdownButton } from "../components/ShutdownButton";
 import { useEditorStore } from "../store/editor";
 import {
   DIRECTION_LABELS,
@@ -17,11 +18,10 @@ import type { SplitOrientation } from "../../shared/geometry";
 const TOOLS: Array<{ id: EditorTool; icon: string; label: string }> = [
   { id: "select", icon: "↖", label: "Selecionar" },
   { id: "answer", icon: "A", label: "Resposta" },
-  { id: "clue", icon: "T", label: "Dica" },
+  { id: "clue", icon: "T", label: "Enunciado" },
   { id: "merge", icon: "▣", label: "Unir" },
   { id: "divide", icon: "◇", label: "Dividir" },
   { id: "separate", icon: "▦", label: "Separar" },
-  { id: "arrow", icon: "→", label: "Seta" },
   { id: "diagonal", icon: "╱", label: "Diagonal" },
   { id: "erase", icon: "×", label: "Apagar" }
 ];
@@ -32,6 +32,8 @@ export function EditorPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [sideTab, setSideTab] = useState<"properties" | "words">("properties");
+  const [zoom, setZoom] = useState(0.5);
+  const [bankText, setBankText] = useState("");
   const state = useEditorStore();
 
   useEffect(() => {
@@ -43,6 +45,12 @@ export function EditorPage() {
       .catch((error: Error) => setLoadError(error.message))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (state.crossword) {
+      setBankText(state.crossword.wordBank.join("\n"));
+    }
+  }, [state.crossword?.id]);
 
   useEffect(() => {
     if (!state.dirty || !state.crossword) return;
@@ -196,6 +204,7 @@ export function EditorPage() {
           >
             Imprimir
           </Link>
+          <ShutdownButton compact />
         </div>
       </header>
 
@@ -231,24 +240,46 @@ export function EditorPage() {
                 {crossword.rows} × {crossword.columns}
               </span>
             </div>
-            <p>
-              {state.tool === "merge"
-                ? "Escolha dois cantos para unir."
-                : "Clique em um quadrado para editar."}
-            </p>
+            <div className="canvas-controls">
+              <p>
+                {state.tool === "merge"
+                  ? "Escolha dois cantos para unir."
+                  : "Clique em um quadrado para editar."}
+              </p>
+              <div className="zoom-controls" aria-label="Zoom da grade">
+                <button
+                  onClick={() => setZoom((value) => Math.max(0.2, value - 0.1))}
+                  title="Diminuir zoom"
+                >
+                  −
+                </button>
+                <span>{Math.round(zoom * 100)}%</span>
+                <button
+                  onClick={() => setZoom((value) => Math.min(1.25, value + 0.1))}
+                  title="Aumentar zoom"
+                >
+                  +
+                </button>
+                <button onClick={() => setZoom(0.5)} title="Restaurar zoom">
+                  Padrão
+                </button>
+              </div>
+            </div>
           </div>
           <div className="grid-scroll">
-            <CrosswordGrid
-              crossword={crossword}
-              showAnswers={state.showAnswers}
-              selectedAreaId={state.selectedAreaId}
-              selectedRegionId={state.selectedRegionId}
-              selectedWordId={state.selectedWordId}
-              tool={state.tool}
-              onCellClick={state.applyToolAt}
-              onRegionClick={state.selectArea}
-              onMoveDivider={state.moveRegionDivider}
-            />
+            <div className="grid-zoom" style={{ width: `${zoom * 100}%` }}>
+              <CrosswordGrid
+                crossword={crossword}
+                showAnswers={state.showAnswers}
+                selectedAreaId={state.selectedAreaId}
+                selectedRegionId={state.selectedRegionId}
+                selectedWordId={state.selectedWordId}
+                tool={state.tool}
+                onCellClick={state.applyToolAt}
+                onRegionClick={state.selectArea}
+                onMoveDivider={state.moveRegionDivider}
+              />
+            </div>
           </div>
         </section>
 
@@ -282,10 +313,12 @@ export function EditorPage() {
         </div>
         <textarea
           aria-label="Banco de palavras"
-          value={crossword.wordBank.join("\n")}
-          onChange={(event) =>
-            state.updateWordBank(event.target.value.split(/\r?\n/))
-          }
+          value={bankText}
+          onChange={(event) => {
+            const value = event.target.value;
+            setBankText(value);
+            state.updateWordBank(value.split(/\r?\n/));
+          }}
           placeholder="Digite palavras aqui..."
         />
       </footer>
@@ -305,29 +338,56 @@ function PropertiesPanel({
   const [divisionTexts, setDivisionTexts] = useState(["", ""]);
   const [divisionOrientation, setDivisionOrientation] =
     useState<SplitOrientation>("auto");
+  const [divisionEnabled, setDivisionEnabled] = useState(false);
   const [answer, setAnswer] = useState("");
   const [startSide, setStartSide] = useState<Direction>("right");
   const [endDirection, setEndDirection] = useState<Direction>("right");
+  const [addingDirection, setAddingDirection] = useState(false);
 
   const crossword = state.crossword!;
   const selectedRegion = selectedArea?.clueRegions.find(
     (region) => region.id === state.selectedRegionId
   ) ?? selectedArea?.clueRegions[0];
-  const existingWord = crossword.words.find(
-    (word) =>
-      word.id === state.selectedWordId &&
-      word.clueRegionId === selectedRegion?.id
-  );
-  const regionWordCount = crossword.words.filter(
+  const regionWords = crossword.words.filter(
     (word) => word.clueRegionId === selectedRegion?.id
-  ).length;
+  );
+  const existingWord = addingDirection
+    ? undefined
+    : regionWords.find((word) => word.id === state.selectedWordId) ??
+      regionWords[0];
+  const existingWordIndex = existingWord
+    ? regionWords.findIndex((word) => word.id === existingWord.id)
+    : -1;
+  const regionWordCount = regionWords.length;
 
   useEffect(() => {
+    if (addingDirection) {
+      setAnswer("");
+      setStartSide("right");
+      setEndDirection("right");
+      return;
+    }
+
     setAnswer(existingWord?.answer ?? "");
-    const arrow = selectedRegion?.arrows[0];
+    const arrow =
+      selectedRegion?.arrows[existingWordIndex] ?? selectedRegion?.arrows[0];
     setStartSide(arrow?.startSide ?? "right");
     setEndDirection(arrow?.endDirection ?? existingWord?.direction ?? "right");
-  }, [selectedRegion?.id, existingWord?.answer]);
+  }, [
+    addingDirection,
+    selectedRegion?.id,
+    selectedRegion?.arrows,
+    existingWord?.answer,
+    existingWordIndex
+  ]);
+
+  useEffect(() => {
+    setAddingDirection(false);
+  }, [selectedRegion?.id]);
+
+  useEffect(() => {
+    setDivisionEnabled((selectedArea?.clueRegions.length ?? 0) > 1);
+  }, [selectedArea?.id]);
 
   if (!selectedArea) {
     return (
@@ -346,7 +406,7 @@ function PropertiesPanel({
         </span>
         <strong>
           {selectedArea.kind === "clue"
-            ? "Área de dica"
+            ? "Área de enunciado"
             : selectedArea.kind === "answer"
               ? "Resposta"
               : "Área vazia"}
@@ -358,10 +418,20 @@ function PropertiesPanel({
 
       {selectedArea.kind === "answer" && (
         <label>
-          {crossword.kind === "syllabic" ? "Sílaba" : "Letra"}
+          {crossword.kind === "syllabic"
+            ? "Sílaba"
+            : selectedArea.diagonal
+              ? "Duas letras"
+              : "Letra"}
           <input
             autoFocus
-            maxLength={crossword.kind === "syllabic" ? 5 : 1}
+            maxLength={
+              crossword.kind === "syllabic"
+                ? 5
+                : selectedArea.diagonal
+                  ? 2
+                  : 1
+            }
             value={selectedArea.content}
             onChange={(event) =>
               state.updateAreaContent(selectedArea.id, event.target.value)
@@ -373,7 +443,7 @@ function PropertiesPanel({
       {selectedArea.kind === "clue" && selectedRegion && (
         <>
           <label>
-            Texto da dica
+            Texto do enunciado
             <textarea
               value={selectedRegion.content}
               onChange={(event) =>
@@ -390,7 +460,7 @@ function PropertiesPanel({
             selectedArea.rowSpan * 56
           ) && (
             <div className="fit-warning">
-              O texto está apertado. Aumente a área, reduza a dica ou redistribua
+              O texto está apertado. Aumente a área, reduza o enunciado ou redistribua
               as divisões.
             </div>
           )}
@@ -467,29 +537,32 @@ function PropertiesPanel({
             </div>
             <button
               className="primary-button full"
-              onClick={() =>
+              onClick={() => {
                 state.upsertWord(
                   selectedRegion.id,
                   answer,
                   startSide,
                   endDirection,
                   existingWord?.id
-                )
-              }
+                );
+                setAddingDirection(false);
+              }}
             >
               {existingWord ? "Atualizar palavra" : "Criar palavra"}
             </button>
             {existingWord && (
               <div className="button-stack">
-                <button
+                {/* <button
                   className="secondary-button full"
                   onClick={() => {
-                    state.selectArea(selectedArea.id, selectedRegion.id);
+                    setAddingDirection(true);
                     setAnswer("");
+                    setStartSide("right");
+                    setEndDirection("right");
                   }}
                 >
                   Adicionar outra direção
-                </button>
+                </button> */}
                 <button
                   className="danger-link"
                   onClick={() => state.removeWord(existingWord.id)}
@@ -500,17 +573,29 @@ function PropertiesPanel({
             )}
             {regionWordCount > 1 && (
               <small className="muted">
-                Esta dica possui {regionWordCount} respostas e setas.
+                Este enunciado possui {regionWordCount} respostas e setas.
               </small>
             )}
           </section>
 
           <section className="property-section">
-            <h3>Divisão da área</h3>
-            {selectedArea.clueRegions.length === 1 ? (
+            <label className="division-toggle">
+              <span>
+                <strong>Divisão da área</strong>
+                <small>
+                  {divisionEnabled ? "Ativa" : "Desativada"}
+                </small>
+              </span>
+              <input
+                type="checkbox"
+                checked={divisionEnabled}
+                onChange={(event) => setDivisionEnabled(event.target.checked)}
+              />
+            </label>
+            {divisionEnabled && selectedArea.clueRegions.length === 1 ? (
               <>
                 <label>
-                  Quantidade de dicas
+                  Quantidade de enunciados
                   <select
                     value={divisionCount}
                     onChange={(event) => {
@@ -546,7 +631,7 @@ function PropertiesPanel({
                 </label>
                 {divisionTexts.map((text, index) => (
                   <label key={index}>
-                    Dica {index + 1}
+                    Enunciado {index + 1}
                     <textarea
                       rows={2}
                       value={text}
@@ -570,10 +655,10 @@ function PropertiesPanel({
                     )
                   }
                 >
-                  Dividir automaticamente
+                  Dividir área
                 </button>
               </>
-            ) : (
+            ) : divisionEnabled ? (
               <div className="button-stack">
                 <label>
                   Redistribuir com orientação
@@ -608,7 +693,7 @@ function PropertiesPanel({
                   Desfazer divisão
                 </button>
               </div>
-            )}
+            ) : null}
           </section>
         </>
       )}
@@ -651,7 +736,7 @@ function WordsPanel() {
       {words.length === 0 ? (
         <div className="panel-empty">
           <strong>Nenhuma palavra ainda</strong>
-          <p>Selecione uma dica e informe sua resposta.</p>
+          <p>Selecione um enunciado e informe sua resposta.</p>
         </div>
       ) : (
         <div className="word-list">
@@ -672,7 +757,7 @@ function WordsPanel() {
                 <span className={`status-dot ${status}`} />
                 <span>
                   <strong>{word.answer}</strong>
-                  <small>{region?.content || "Dica sem texto"}</small>
+                  <small>{region?.content || "Enunciado sem texto"}</small>
                 </span>
                 <span className="word-meta">
                   {DIRECTION_LABELS[word.direction]} · {word.cells.length}

@@ -23,6 +23,7 @@ const CELL = 56;
 interface CrosswordGridProps {
   crossword: Crossword;
   showAnswers: boolean;
+  answerSheet?: boolean;
   readOnly?: boolean;
   selectedAreaId?: string | null;
   selectedRegionId?: string | null;
@@ -40,6 +41,7 @@ interface CrosswordGridProps {
 export function CrosswordGrid({
   crossword,
   showAnswers,
+  answerSheet = false,
   readOnly = false,
   selectedAreaId,
   selectedRegionId,
@@ -118,13 +120,14 @@ export function CrosswordGrid({
           selectedRegionId={selectedRegionId}
           selectedCells={selectedCells}
           showAnswers={showAnswers}
+          answerSheet={answerSheet}
           readOnly={readOnly}
           tool={tool}
           onRegionClick={onRegionClick}
         />
       ))}
 
-      {crossword.kind !== "arrowless" &&
+      {!answerSheet && crossword.kind !== "arrowless" &&
         crossword.areas.flatMap((area) =>
           area.clueRegions.flatMap((region) => {
             const regionWords = crossword.words.filter(
@@ -211,6 +214,7 @@ interface AreaViewProps {
   selectedRegionId?: string | null;
   selectedCells: Set<string>;
   showAnswers: boolean;
+  answerSheet: boolean;
   readOnly: boolean;
   tool: EditorTool;
   onRegionClick?: (areaId: string, regionId: string) => void;
@@ -224,6 +228,7 @@ function AreaView({
   selectedRegionId,
   selectedCells,
   showAnswers,
+  answerSheet,
   readOnly,
   tool,
   onRegionClick
@@ -250,7 +255,10 @@ function AreaView({
           isWordCell ? "is-word-selected" : ""
         ].join(" ")}
       />
-      {area.kind === "clue" &&
+      {answerSheet && area.kind === "clue" && (
+        <rect x={x} y={y} width={width} height={height} className="answer-clue-block" />
+      )}
+      {!answerSheet && area.kind === "clue" &&
         area.clueRegions.map((region) => {
           const rectangle = polygonToRectangle(region.polygon);
           const points = region.polygon
@@ -296,22 +304,45 @@ function AreaView({
                 pointerEvents="none"
               >
                 <div className="clue-text" title={region.content}>
-                  {region.content || "Dica"}
+                  {region.content || "Enunciado"}
                 </div>
               </foreignObject>
             </g>
           );
         })}
       {area.kind === "answer" && showAnswers && answer && (
-        <text
-          className={crossword.kind === "syllabic" ? "answer syllable" : "answer"}
-          x={x + width / 2}
-          y={y + height / 2}
-          dominantBaseline="central"
-          textAnchor="middle"
-        >
-          {answer}
-        </text>
+        area.diagonal && answer.length > 1 ? (
+          <>
+            <text
+              className="answer diagonal-answer first"
+              x={x + width * (area.diagonal === "down" ? 0.72 : 0.28)}
+              y={y + height * 0.28}
+              dominantBaseline="central"
+              textAnchor="middle"
+            >
+              {answer[0]}
+            </text>
+            <text
+              className="answer diagonal-answer second"
+              x={x + width * (area.diagonal === "down" ? 0.28 : 0.72)}
+              y={y + height * 0.72}
+              dominantBaseline="central"
+              textAnchor="middle"
+            >
+              {answer[1]}
+            </text>
+          </>
+        ) : (
+          <text
+            className={crossword.kind === "syllabic" ? "answer syllable" : "answer"}
+            x={x + width / 2}
+            y={y + height / 2}
+            dominantBaseline="central"
+            textAnchor="middle"
+          >
+            {answer}
+          </text>
+        )
       )}
       {area.diagonal && (
         <line
@@ -343,8 +374,6 @@ function ArrowView({
 }) {
   const width = area.columnSpan * CELL;
   const height = area.rowSpan * CELL;
-  const originX = area.column * CELL;
-  const originY = area.row * CELL;
   const rectangle = polygonToRectangle(region);
   const firstCell = word.cells[0];
   if (!rectangle || !firstCell) return null;
@@ -355,49 +384,16 @@ function ArrowView({
     right: (firstCell.column + 1) * CELL,
     bottom: (firstCell.row + 1) * CELL
   };
-  const targetCenter = {
-    x: (firstCell.column + 0.5) * CELL,
-    y: (firstCell.row + 0.5) * CELL
+  const regionCenter = {
+    x: (rectangle.left + rectangle.right) / 2,
+    y: (rectangle.top + rectangle.bottom) / 2
   };
-  const bounds = {
-    left: originX + rectangle.left * width,
-    top: originY + rectangle.top * height,
-    right: originX + rectangle.right * width,
-    bottom: originY + rectangle.bottom * height
-  };
-  const start = regionEdgePoint(startSide, bounds, targetCenter);
-  const startVector = directionVector(startSide);
-  const endVector = directionVector(endDirection);
-  const outside = {
-    x: start.x + startVector.x * 7,
-    y: start.y + startVector.y * 7
-  };
-  const end = answerEntryPoint(endDirection, cellBounds);
-  const approach = {
-    x: end.x - endVector.x * 17,
-    y: end.y - endVector.y * 17
-  };
-  const route =
-    endDirection === "left" || endDirection === "right"
-      ? [
-          outside,
-          { x: outside.x, y: approach.y },
-          approach,
-          end
-        ]
-      : [
-          outside,
-          { x: approach.x, y: outside.y },
-          approach,
-          end
-        ];
-  const compactRoute = [start, ...route].filter(
-    (point, index, points) =>
-      index === 0 ||
-      point.x !== points[index - 1].x ||
-      point.y !== points[index - 1].y
-  );
-  const path = compactRoute
+  const path = arrowPointsInCell(
+    startSide,
+    endDirection,
+    cellBounds,
+    regionCenter
+  )
     .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
     .join(" ");
   return (
@@ -407,36 +403,6 @@ function ArrowView({
       markerEnd="url(#arrow-head)"
     />
   );
-}
-
-function regionEdgePoint(
-  side: Direction,
-  bounds: { left: number; top: number; right: number; bottom: number },
-  target: Point
-): Point {
-  const padding = 6;
-  switch (side) {
-    case "up":
-      return {
-        x: clamp(target.x, bounds.left + padding, bounds.right - padding),
-        y: bounds.top
-      };
-    case "down":
-      return {
-        x: clamp(target.x, bounds.left + padding, bounds.right - padding),
-        y: bounds.bottom
-      };
-    case "left":
-      return {
-        x: bounds.left,
-        y: clamp(target.y, bounds.top + padding, bounds.bottom - padding)
-      };
-    case "right":
-      return {
-        x: bounds.right,
-        y: clamp(target.y, bounds.top + padding, bounds.bottom - padding)
-      };
-  }
 }
 
 function directionVector(direction: Direction): Point {
@@ -452,33 +418,76 @@ function directionVector(direction: Direction): Point {
   }
 }
 
-function answerEntryPoint(
+function arrowPointsInCell(
+  startSide: Direction,
   direction: Direction,
-  bounds: { left: number; top: number; right: number; bottom: number }
-): Point {
-  const inset = 15;
-  switch (direction) {
-    case "up":
-      return {
-        x: (bounds.left + bounds.right) / 2,
-        y: bounds.bottom - inset
-      };
-    case "down":
-      return {
-        x: (bounds.left + bounds.right) / 2,
-        y: bounds.top + inset
-      };
-    case "left":
-      return {
-        x: bounds.right - inset,
-        y: (bounds.top + bounds.bottom) / 2
-      };
-    case "right":
-      return {
-        x: bounds.left + inset,
-        y: (bounds.top + bounds.bottom) / 2
-      };
+  bounds: { left: number; top: number; right: number; bottom: number },
+  alignment: Point
+): Point[] {
+  const inset = 7;
+  const leg = 16;
+  const straightLength = 22;
+  const aligned = {
+    x: clamp(
+      bounds.left + (bounds.right - bounds.left) * alignment.x,
+      bounds.left + inset,
+      bounds.right - inset
+    ),
+    y: clamp(
+      bounds.top + (bounds.bottom - bounds.top) * alignment.y,
+      bounds.top + inset,
+      bounds.bottom - inset
+    )
+  };
+  const entryVector = directionVector(startSide);
+  const endVector = directionVector(direction);
+  const start =
+    startSide === "left"
+      ? { x: bounds.right, y: aligned.y }
+      : startSide === "right"
+        ? { x: bounds.left, y: aligned.y }
+        : startSide === "up"
+          ? { x: aligned.x, y: bounds.bottom }
+          : { x: aligned.x, y: bounds.top };
+  const inward = {
+    x: start.x + entryVector.x * leg,
+    y: start.y + entryVector.y * leg
+  };
+
+  if (startSide === direction) {
+    return [
+      start,
+      {
+        x: clamp(
+          start.x + endVector.x * straightLength,
+          bounds.left + inset,
+          bounds.right - inset
+        ),
+        y: clamp(
+          start.y + endVector.y * straightLength,
+          bounds.top + inset,
+          bounds.bottom - inset
+        )
+      }
+    ];
   }
+
+  return [
+    start,
+    inward,
+    {
+      x: clamp(
+        inward.x + endVector.x * leg,
+        bounds.left + inset,
+        bounds.right - inset
+      ),
+      y: clamp(
+        inward.y + endVector.y * leg,
+        bounds.top + inset,
+        bounds.bottom - inset
+      )
+    }
+  ];
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {

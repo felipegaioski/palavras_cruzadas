@@ -50,5 +50,8 @@ export const api = {
   },
   remove(id: number) {
     return request<void>(`/api/crosswords/${id}`, { method: "DELETE" });
+  },
+  shutdown() {
+    return request<{ ok: boolean }>("/api/shutdown", { method: "POST" });
   }
 };

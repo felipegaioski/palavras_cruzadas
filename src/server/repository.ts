@@ -274,7 +274,7 @@ function persistChildren(
       .values(
         crossword.words.map((word) => {
           const clueRegionId = regionDbIds.get(word.clueRegionId);
-          if (!clueRegionId) throw new Error("Palavra sem região de dica.");
+          if (!clueRegionId) throw new Error("Palavra sem região de enunciado.");
           return {
             clientId: word.id,
             crosswordId,
