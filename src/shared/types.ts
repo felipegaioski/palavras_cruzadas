@@ -3,7 +3,9 @@ export type CrosswordKind =
   | "syllabic"
   | "arrowless"
   | "thematic"
-  | "diagonalless";
+  | "diagonalless"
+  | "directresponse"
+  | "letterbag";
 export type AreaKind = "answer" | "clue" | "empty";
 export type Direction = "up" | "down" | "left" | "right";
 export type Diagonal = "down" | "up" | null;
@@ -43,6 +45,8 @@ export interface Area {
   columnSpan: number;
   content: string;
   diagonal: Diagonal;
+  directResponseNumber: number | null;
+  letterBagSize: number;
   clueRegions: ClueRegion[];
 }
 
@@ -105,6 +109,8 @@ export const KIND_LABELS: Record<CrosswordKind, string> = {
   syllabic: "Silábica",
   arrowless: "Sem setas",
   diagonalless: "Sem diagonal",
+  directresponse: "Direta resposta",
+  letterbag: "BolsÃ£o de letras",
   thematic: "Temática"
 };
 

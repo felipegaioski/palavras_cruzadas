@@ -173,6 +173,8 @@ export function getCrossword(id: number): Crossword {
         columnSpan: area.columnSpan,
         content: area.content,
         diagonal: area.diagonal as Area["diagonal"],
+        directResponseNumber: area.directResponseNumber,
+        letterBagSize: area.letterBagSize ?? 0,
         clueRegions: regionsByArea.get(area.id) ?? []
       })
     ),
@@ -239,7 +241,9 @@ function persistChildren(
         rowSpan: area.rowSpan,
         columnSpan: area.columnSpan,
         content: area.content,
-        diagonal: area.diagonal
+        diagonal: area.diagonal,
+        directResponseNumber: area.directResponseNumber,
+        letterBagSize: area.letterBagSize ?? 0
       })
       .returning({ id: areasTable.id })
       .get();

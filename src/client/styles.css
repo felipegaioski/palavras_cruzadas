@@ -789,6 +789,10 @@ legend {
   fill: var(--blue-soft);
 }
 
+.kind-answer .area-background.is-letter-bag {
+  fill: #e6efe9;
+}
+
 .clue-region.has-overflow polygon {
   fill: #f7dfd5;
 }
@@ -826,6 +830,55 @@ legend {
   pointer-events: none;
 }
 
+.direct-response-marker {
+  fill: #d9d6cb;
+  opacity: 0.78;
+  pointer-events: none;
+}
+
+.direct-response-marker-number {
+  fill: #17201c;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+.direct-response-strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.direct-response-slot {
+  display: grid;
+  width: 46px;
+  height: 56px;
+  grid-template-rows: 16px 1fr;
+  justify-items: center;
+  color: #17201c;
+  font-family: Arial, sans-serif;
+}
+
+.direct-response-slot span {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.direct-response-slot strong {
+  display: grid;
+  width: 44px;
+  height: 38px;
+  place-items: center;
+  border: 1.4px solid #6d746f;
+  background: #fff;
+  font-size: 20px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
 .answer {
   fill: #18221e;
   font-family: Arial, sans-serif;
@@ -839,6 +892,11 @@ legend {
 
 .answer.diagonal-answer {
   font-size: 20px;
+}
+
+.answer.letter-bag-answer {
+  font-size: 18px;
+  letter-spacing: 0.04em;
 }
 
 .answer-clue-block {

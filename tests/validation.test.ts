@@ -83,4 +83,19 @@ describe("validação", () => {
     ];
     expect(() => validateCrossword(value)).toThrow();
   });
+
+  it("valida a quantidade do bolsao de letras", () => {
+    const value = crossword();
+    value.kind = "letterbag";
+    value.areas[1] = {
+      ...value.areas[1],
+      kind: "answer",
+      letterBagSize: 3,
+      content: "ABC"
+    };
+    expect(() => validateCrossword(value)).not.toThrow();
+
+    value.areas[1].letterBagSize = 2;
+    expect(() => validateCrossword(value)).toThrow("bols");
+  });
 });

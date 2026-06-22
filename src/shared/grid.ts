@@ -34,6 +34,8 @@ export function createEmptyArea(row: number, column: number): Area {
     columnSpan: 1,
     content: "",
     diagonal: null,
+    directResponseNumber: null,
+    letterBagSize: 0,
     clueRegions: []
   };
 }
@@ -132,8 +134,11 @@ export function buildWordCells(
     }
     cells.push(cell);
     const target = findAreaAt(areas, cell.row, cell.column);
-    if (kind !== "syllabic" && target?.diagonal && cells.length < length) {
-      cells.push({ ...cell });
+    if (kind !== "syllabic" && target && cells.length < length) {
+      const capacity = target.letterBagSize >= 3 ? target.letterBagSize : target.diagonal ? 2 : 1;
+      for (let extra = 1; extra < capacity && cells.length < length; extra += 1) {
+        cells.push({ ...cell });
+      }
     }
   }
   return cells;
@@ -171,7 +176,7 @@ export function findWordConflicts(
       const previous = values.get(key) ?? [];
       const area = findAreaAt(areas, cell.row, cell.column);
       const different = previous.filter((item) => item.value !== current);
-      if (different.length && !area?.diagonal) {
+      if (different.length && !area?.diagonal && !area?.letterBagSize) {
         different.forEach((item) => conflicts.add(item.wordId));
         conflicts.add(word.id);
       } else if (current) {
@@ -198,16 +203,19 @@ export function responseValues(crossword: Crossword): Map<string, string> {
       const key = cellKey(cell);
       const area = findAreaAt(crossword.areas, cell.row, cell.column);
       const current = result.get(key) ?? "";
-      if (area?.diagonal) {
-        const letters = Array.from(current.padEnd(2, " "));
+      if (area && (area.diagonal || area.letterBagSize >= 3)) {
+        const capacity = area.letterBagSize >= 3 ? area.letterBagSize : 2;
+        const letters = Array.from(current.padEnd(capacity, " "));
         const occurrence = diagonalOccurrences.get(key) ?? 0;
         const repeatedInWord =
           word.cells.filter((item) => cellKey(item) === key).length > 1;
         const letterIndex = repeatedInWord
           ? occurrence
-          : word.direction === "up" || word.direction === "down"
+          : area.diagonal && (word.direction === "up" || word.direction === "down")
             ? 0
-            : 1;
+            : area.diagonal
+              ? 1
+              : Math.min(occurrence, capacity - 1);
         letters[letterIndex] = units[index];
         result.set(key, letters.join("").trimEnd());
         diagonalOccurrences.set(key, occurrence + 1);
@@ -217,4 +225,26 @@ export function responseValues(crossword: Crossword): Map<string, string> {
     });
   }
   return result;
+}
+
+export function directResponseEntries(
+  crossword: Crossword,
+  includeBlanks = true
+): Array<{ number: number; value: string; cell: CellCoordinate }> {
+  const answers = responseValues(crossword);
+  return crossword.areas
+    .filter(
+      (area) =>
+        area.kind === "answer" &&
+        typeof area.directResponseNumber === "number" &&
+        area.directResponseNumber > 0 &&
+        (includeBlanks ||
+          Boolean(answers.get(cellKey({ row: area.row, column: area.column }))))
+    )
+    .map((area) => ({
+      number: area.directResponseNumber!,
+      value: answers.get(cellKey({ row: area.row, column: area.column }))?.[0] ?? "",
+      cell: { row: area.row, column: area.column }
+    }))
+    .sort((first, second) => first.number - second.number);
 }

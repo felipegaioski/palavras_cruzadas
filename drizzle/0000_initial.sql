@@ -23,6 +23,8 @@ CREATE TABLE `areas` (
   `column_span` integer DEFAULT 1 NOT NULL,
   `content` text DEFAULT '' NOT NULL,
   `diagonal` text,
+	`direct_response_number` integer,
+	`letter_bag_size` integer DEFAULT 0 NOT NULL,
   FOREIGN KEY (`crossword_id`) REFERENCES `crosswords`(`id`) ON DELETE cascade
 );
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
-import { CrosswordGrid } from "../components/CrosswordGrid";
+import { CrosswordGrid, DirectResponseStrip } from "../components/CrosswordGrid";
 import { ShutdownButton } from "../components/ShutdownButton";
 import { useEditorStore } from "../store/editor";
 import {
@@ -284,6 +284,9 @@ export function EditorPage() {
               />
             </label>
           )}
+          {crossword.kind === "directresponse" && (
+            <DirectResponseStrip crossword={crossword} showValues />
+          )}
           <div className="grid-scroll">
             <div className="grid-zoom" style={{ width: `${zoom * 100}%` }}>
               <CrosswordGrid
@@ -380,6 +383,11 @@ function PropertiesPanel({
     ? regionWords.findIndex((word) => word.id === existingWord.id)
     : -1;
   const regionWordCount = regionWords.length;
+  const nextDirectResponseNumber =
+    Math.max(
+      0,
+      ...crossword.areas.map((area) => area.directResponseNumber ?? 0)
+    ) + 1;
 
   useEffect(() => {
     if (addingDirection) {
@@ -441,6 +449,8 @@ function PropertiesPanel({
         <label>
           {crossword.kind === "syllabic"
             ? "Sílaba"
+            : selectedArea.letterBagSize >= 3
+              ? "Letras"
             : selectedArea.diagonal
               ? "Duas letras"
               : "Letra"}
@@ -449,6 +459,8 @@ function PropertiesPanel({
             maxLength={
               crossword.kind === "syllabic"
                 ? 5
+                : selectedArea.letterBagSize >= 3
+                  ? selectedArea.letterBagSize
                 : selectedArea.diagonal
                   ? 2
                   : 1
@@ -459,6 +471,90 @@ function PropertiesPanel({
             }
           />
         </label>
+      )}
+
+      {selectedArea.kind === "answer" && crossword.kind === "letterbag" && (
+        <section className="property-section">
+          <label className="division-toggle">
+            <span>
+              <strong>Bolsão de letras</strong>
+              <small>
+                {selectedArea.letterBagSize >= 3
+                  ? `${selectedArea.letterBagSize} letras`
+                  : "Desativado"}
+              </small>
+            </span>
+            <input
+              type="checkbox"
+              checked={selectedArea.letterBagSize >= 3}
+              onChange={(event) =>
+                state.updateAreaLetterBagSize(
+                  selectedArea.id,
+                  event.target.checked ? 3 : 0
+                )
+              }
+            />
+          </label>
+          {selectedArea.letterBagSize >= 3 && (
+            <label>
+              Quantidade de letras
+              <input
+                type="number"
+                min={3}
+                max={12}
+                value={selectedArea.letterBagSize}
+                onChange={(event) =>
+                  state.updateAreaLetterBagSize(
+                    selectedArea.id,
+                    Number(event.target.value)
+                  )
+                }
+              />
+            </label>
+          )}
+        </section>
+      )}
+
+      {selectedArea.kind === "answer" && crossword.kind === "directresponse" && (
+        <section className="property-section">
+          <label className="division-toggle">
+            <span>
+              <strong>Letra-resposta</strong>
+              <small>
+                {selectedArea.directResponseNumber
+                  ? `NÃºmero ${selectedArea.directResponseNumber}`
+                  : "Desativada"}
+              </small>
+            </span>
+            <input
+              type="checkbox"
+              checked={Boolean(selectedArea.directResponseNumber)}
+              onChange={(event) =>
+                state.updateAreaDirectResponseNumber(
+                  selectedArea.id,
+                  event.target.checked ? nextDirectResponseNumber : null
+                )
+              }
+            />
+          </label>
+          {selectedArea.directResponseNumber && (
+            <label>
+              NÃºmero da letra
+              <input
+                type="number"
+                min={1}
+                max={99}
+                value={selectedArea.directResponseNumber}
+                onChange={(event) =>
+                  state.updateAreaDirectResponseNumber(
+                    selectedArea.id,
+                    Number(event.target.value)
+                  )
+                }
+              />
+            </label>
+          )}
+        </section>
       )}
 
       {selectedArea.kind === "clue" && selectedRegion && (

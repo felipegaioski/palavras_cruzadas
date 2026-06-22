@@ -50,6 +50,9 @@ describe("persistência SQLite", () => {
       "answer";
     created.areas.find((area) => area.row === 0 && area.column === 2)!.content =
       "A";
+    created.areas.find(
+      (area) => area.row === 0 && area.column === 2
+    )!.directResponseNumber = 1;
     created.words = [
       {
         id: makeId("word"),
@@ -75,6 +78,10 @@ describe("persistência SQLite", () => {
         .answerLength
     ).toBe(5);
     expect(reopened.words[0].answer).toBe("A");
+    expect(
+      reopened.areas.find((area) => area.row === 0 && area.column === 2)
+        ?.directResponseNumber
+    ).toBe(1);
     expect(reopened.wordBank).toEqual(["A"]);
   });
 

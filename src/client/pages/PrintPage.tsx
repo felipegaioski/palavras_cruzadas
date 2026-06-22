@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api";
-import { CrosswordGrid } from "../components/CrosswordGrid";
+import { CrosswordGrid, DirectResponseStrip } from "../components/CrosswordGrid";
 import {
   KIND_LABELS,
   type Crossword,
@@ -215,6 +215,13 @@ export function PrintPage() {
                         <p className="printed-theme">
                           {crossword.themeDescription}
                         </p>
+                      )}
+                    {mode === "activity" &&
+                      crossword.kind === "directresponse" && (
+                        <DirectResponseStrip
+                          crossword={crossword}
+                          showValues={false}
+                        />
                       )}
                     <CrosswordGrid
                       crossword={crossword}

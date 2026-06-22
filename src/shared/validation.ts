@@ -21,9 +21,15 @@ export function validateCrossword(crossword: Crossword): void {
   validateDimensions(crossword.rows, crossword.columns);
   if (!crossword.title.trim()) throw new Error("Informe um título.");
   if (
-    !["direct", "syllabic", "arrowless", "thematic", "diagonalless"].includes(
-      crossword.kind
-    )
+    ![
+      "direct",
+      "syllabic",
+      "arrowless",
+      "thematic",
+      "diagonalless",
+      "directresponse",
+      "letterbag"
+    ].includes(crossword.kind)
   ) {
     throw new Error("Tipo de cruzada inválido.");
   }
@@ -58,6 +64,22 @@ function validateAreas(crossword: Crossword): void {
         }
       }
     }
+    if (
+      area.directResponseNumber !== null &&
+      (!Number.isInteger(area.directResponseNumber) ||
+        area.directResponseNumber < 1 ||
+        area.directResponseNumber > 99)
+    ) {
+      throw new Error("Uma letra-resposta possui nÃºmero invÃ¡lido.");
+    }
+    if (
+      area.letterBagSize !== 0 &&
+      (!Number.isInteger(area.letterBagSize) ||
+        area.letterBagSize < 3 ||
+        area.letterBagSize > 12)
+    ) {
+      throw new Error("Um bolsÃ£o de letras possui quantidade invÃ¡lida.");
+    }
     validateResponseContent(area, crossword.kind);
   }
   for (let first = 0; first < crossword.areas.length; first += 1) {
@@ -74,7 +96,14 @@ function validateResponseContent(
   kind: Crossword["kind"]
 ): void {
   if (area.kind !== "answer") return;
-  const limit = kind === "syllabic" ? 5 : area.diagonal ? 2 : 1;
+  const limit =
+    kind === "syllabic"
+      ? 5
+      : area.letterBagSize >= 3
+        ? area.letterBagSize
+        : area.diagonal
+          ? 2
+          : 1;
   if (area.content.length > limit) {
     throw new Error(
       kind === "syllabic"

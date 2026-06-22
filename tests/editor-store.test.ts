@@ -128,4 +128,39 @@ describe("estado do editor", () => {
       { row: 2, column: 3 }
     ]);
   });
+
+  it("preenche varias letras ao atravessar um bolsao de letras", () => {
+    useEditorStore.getState().load({
+      ...sample(),
+      kind: "letterbag"
+    });
+    const store = useEditorStore.getState();
+    store.setTool("clue");
+    store.applyToolAt(2, 1);
+    const clue = useEditorStore.getState().crossword!.areas.find(
+      (area) => area.row === 2 && area.column === 1
+    )!;
+    const bag = useEditorStore.getState().crossword!.areas.find(
+      (area) => area.row === 2 && area.column === 2
+    )!;
+
+    useEditorStore.getState().setTool("answer");
+    useEditorStore.getState().applyToolAt(2, 2);
+    useEditorStore.getState().updateAreaLetterBagSize(bag.id, 3);
+    useEditorStore
+      .getState()
+      .upsertWord(clue.clueRegions[0].id, "ABCD", "right", "right");
+
+    const current = useEditorStore.getState().crossword!;
+    expect(current.areas.find((area) => area.id === bag.id)?.content).toBe("ABC");
+    expect(
+      current.areas.find((area) => area.row === 2 && area.column === 3)?.content
+    ).toBe("D");
+    expect(current.words[0].cells).toEqual([
+      { row: 2, column: 2 },
+      { row: 2, column: 2 },
+      { row: 2, column: 2 },
+      { row: 2, column: 3 }
+    ]);
+  });
 });

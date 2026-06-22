@@ -8,7 +8,7 @@ export function migrate(database: Database.Database): void {
     CREATE TABLE IF NOT EXISTS crosswords (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
-      kind TEXT NOT NULL CHECK (kind IN ('direct', 'syllabic', 'arrowless', 'thematic', 'diagonalless')),
+      kind TEXT NOT NULL CHECK (kind IN ('direct', 'syllabic', 'arrowless', 'thematic', 'diagonalless', 'directresponse', 'letterbag')),
       theme_description TEXT NOT NULL DEFAULT '',
       rows INTEGER NOT NULL CHECK (rows BETWEEN 5 AND 30),
       columns INTEGER NOT NULL CHECK (columns BETWEEN 5 AND 30),
@@ -27,7 +27,9 @@ export function migrate(database: Database.Database): void {
       row_span INTEGER NOT NULL DEFAULT 1 CHECK (row_span > 0),
       column_span INTEGER NOT NULL DEFAULT 1 CHECK (column_span > 0),
       content TEXT NOT NULL DEFAULT '',
-      diagonal TEXT CHECK (diagonal IS NULL OR diagonal IN ('down', 'up'))
+      diagonal TEXT CHECK (diagonal IS NULL OR diagonal IN ('down', 'up')),
+      direct_response_number INTEGER,
+      letter_bag_size INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS clue_regions (
@@ -83,17 +85,27 @@ export function migrate(database: Database.Database): void {
     database.exec("ALTER TABLE clue_regions ADD COLUMN answer_length INTEGER NOT NULL DEFAULT 0;");
   }
 
+  const areaColumns = database
+    .prepare("PRAGMA table_info(areas)")
+    .all() as Array<{ name: string }>;
+  if (!areaColumns.some((column) => column.name === "direct_response_number")) {
+    database.exec("ALTER TABLE areas ADD COLUMN direct_response_number INTEGER;");
+  }
+  if (!areaColumns.some((column) => column.name === "letter_bag_size")) {
+    database.exec("ALTER TABLE areas ADD COLUMN letter_bag_size INTEGER NOT NULL DEFAULT 0;");
+  }
+
   const crosswordSql = database
     .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'crosswords'")
     .get() as { sql?: string } | undefined;
-  if (crosswordSql?.sql && !crosswordSql.sql.includes("'diagonalless'")) {
+  if (crosswordSql?.sql && !crosswordSql.sql.includes("'letterbag'")) {
     database.exec(`
       PRAGMA foreign_keys = OFF;
 
       CREATE TABLE crosswords_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
-        kind TEXT NOT NULL CHECK (kind IN ('direct', 'syllabic', 'arrowless', 'thematic', 'diagonalless')),
+        kind TEXT NOT NULL CHECK (kind IN ('direct', 'syllabic', 'arrowless', 'thematic', 'diagonalless', 'directresponse', 'letterbag')),
         theme_description TEXT NOT NULL DEFAULT '',
         rows INTEGER NOT NULL CHECK (rows BETWEEN 5 AND 30),
         columns INTEGER NOT NULL CHECK (columns BETWEEN 5 AND 30),

@@ -24,7 +24,9 @@ export const areas = sqliteTable("areas", {
   rowSpan: integer("row_span").notNull().default(1),
   columnSpan: integer("column_span").notNull().default(1),
   content: text("content").notNull().default(""),
-  diagonal: text("diagonal")
+  diagonal: text("diagonal"),
+  directResponseNumber: integer("direct_response_number"),
+  letterBagSize: integer("letter_bag_size").notNull().default(0)
 });
 
 export const clueRegions = sqliteTable("clue_regions", {

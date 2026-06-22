@@ -7,6 +7,7 @@ import {
 } from "../../shared/geometry";
 import {
   cellKey,
+  directResponseEntries,
   responseValues
 } from "../../shared/grid";
 import type {
@@ -19,6 +20,30 @@ import type {
 } from "../../shared/types";
 
 const CELL = 56;
+
+export function DirectResponseStrip({
+  crossword,
+  showValues
+}: {
+  crossword: Crossword;
+  showValues: boolean;
+}) {
+  const entries = directResponseEntries(crossword);
+  if (!entries.length) return null;
+  return (
+    <div className="direct-response-strip">
+      {entries.map((entry) => (
+        <div
+          className="direct-response-slot"
+          key={`${entry.number}-${entry.cell.row}-${entry.cell.column}`}
+        >
+          <span>{entry.number}</span>
+          <strong>{showValues ? entry.value : ""}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 interface CrosswordGridProps {
   crossword: Crossword;
@@ -257,7 +282,8 @@ function AreaView({
         className={[
           "area-background",
           selected ? "is-selected" : "",
-          isWordCell ? "is-word-selected" : ""
+          isWordCell ? "is-word-selected" : "",
+          area.letterBagSize >= 3 ? "is-letter-bag" : ""
         ].join(" ")}
       />
       {answerSheet && area.kind === "clue" && (
@@ -330,6 +356,27 @@ function AreaView({
             </g>
           );
         })}
+      {area.kind === "answer" &&
+        crossword.kind === "directresponse" &&
+        area.directResponseNumber && (
+          <>
+            <circle
+              className="direct-response-marker"
+              cx={x + width / 2}
+              cy={y + height / 2}
+              r={Math.min(width, height) * 0.42}
+            />
+            <text
+              className="direct-response-marker-number"
+              x={x + width * 0.22}
+              y={y + height * 0.28}
+              dominantBaseline="central"
+              textAnchor="middle"
+            >
+              {area.directResponseNumber}
+            </text>
+          </>
+        )}
       {area.kind === "answer" && showAnswers && answer && (
         area.diagonal && answer.length > 1 ? (
           <>
@@ -354,7 +401,11 @@ function AreaView({
           </>
         ) : (
           <text
-            className={crossword.kind === "syllabic" ? "answer syllable" : "answer"}
+            className={[
+              "answer",
+              crossword.kind === "syllabic" ? "syllable" : "",
+              area.letterBagSize >= 3 ? "letter-bag-answer" : ""
+            ].join(" ")}
             x={x + width / 2}
             y={y + height / 2}
             dominantBaseline="central"

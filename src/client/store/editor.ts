@@ -46,6 +46,11 @@ interface EditorState {
     values: Partial<Pick<Crossword, "title" | "kind" | "themeDescription">>
   ) => void;
   updateAreaContent: (areaId: string, content: string) => void;
+  updateAreaDirectResponseNumber: (
+    areaId: string,
+    directResponseNumber: number | null
+  ) => void;
+  updateAreaLetterBagSize: (areaId: string, letterBagSize: number) => void;
   updateRegionThematic: (regionId: string, isThematic: boolean) => void;
   updateRegionAnswerLength: (regionId: string, answerLength: number) => void;
   divideArea: (
@@ -147,6 +152,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const normalized = cloneCrossword(crossword);
     normalized.themeDescription ??= "";
     normalized.areas.forEach((area) => {
+      area.directResponseNumber ??= null;
+      area.letterBagSize ??= 0;
       area.clueRegions.forEach((region) => {
         region.isThematic ??= false;
         region.answerLength ??= 0;
@@ -270,6 +277,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           columnSpan: maxColumn - minColumn + 1,
           content: source?.content ?? "",
           diagonal: null,
+          directResponseNumber: null,
+          letterBagSize: 0,
           clueRegions: []
         };
         if (kind === "clue") merged.clueRegions = [regionForArea(merged)];
@@ -302,10 +311,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           (word) => !removed.has(word.clueRegionId)
         );
         current.kind = "answer";
+        current.directResponseNumber ??= null;
+        current.letterBagSize ??= 0;
         current.clueRegions = [];
       } else if (state.tool === "clue") {
         current.kind = "clue";
         current.diagonal = null;
+        current.directResponseNumber = null;
+        current.letterBagSize = 0;
         if (!current.clueRegions.length) {
           current.clueRegions = [regionForArea(current)];
         }
@@ -334,6 +347,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             if (cellRow === current.row && cellColumn === current.column) {
               cell.kind = current.kind;
               cell.content = current.content;
+              cell.directResponseNumber = current.directResponseNumber;
+              cell.letterBagSize = current.letterBagSize;
               if (cell.kind === "clue") cell.clueRegions = [regionForArea(cell)];
             }
             draft.areas.push(cell);
@@ -349,6 +364,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             : current.diagonal === "down"
               ? "up"
               : null;
+        if (current.diagonal) current.letterBagSize = 0;
       } else if (state.tool === "erase") {
         const removed = new Set(current.clueRegions.map((region) => region.id));
         draft.words = draft.words.filter(
@@ -357,6 +373,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         current.kind = "empty";
         current.content = "";
         current.diagonal = null;
+        current.directResponseNumber = null;
+        current.letterBagSize = 0;
         current.clueRegions = [];
       }
     });
@@ -376,7 +394,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const area = draft.areas.find((item) => item.id === areaId);
       if (!area) return;
       const limit =
-        draft.kind === "syllabic" ? 5 : area.diagonal ? 2 : 1;
+        draft.kind === "syllabic"
+          ? 5
+          : area.letterBagSize >= 3
+            ? area.letterBagSize
+            : area.diagonal
+              ? 2
+              : 1;
       const normalized =
         area.kind === "answer"
           ? content.toLocaleUpperCase("pt-BR").slice(0, limit)
@@ -397,7 +421,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             word.answer = units.join(" - ");
           } else {
             const units = Array.from(word.answer.replace(/\s/g, ""));
-            if (area.diagonal && cellIndexes.length > 1) {
+            if (
+              (area.diagonal || area.letterBagSize >= 3) &&
+              cellIndexes.length > 1
+            ) {
               cellIndexes.forEach((cellIndex, index) => {
                 units[cellIndex] = normalized[index] ?? "";
               });
@@ -414,6 +441,29 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           }
         });
       }
+    }),
+
+  updateAreaDirectResponseNumber: (areaId, directResponseNumber) =>
+    commit(set, (draft) => {
+      const area = draft.areas.find((item) => item.id === areaId);
+      if (!area || area.kind !== "answer") return;
+      area.directResponseNumber =
+        directResponseNumber === null
+          ? null
+          : Math.max(1, Math.min(99, Math.floor(directResponseNumber)));
+    }),
+
+  updateAreaLetterBagSize: (areaId, letterBagSize) =>
+    commit(set, (draft) => {
+      const area = draft.areas.find((item) => item.id === areaId);
+      if (!area || area.kind !== "answer") return;
+      area.letterBagSize =
+        letterBagSize > 0
+          ? Math.max(3, Math.min(12, Math.floor(letterBagSize)))
+          : 0;
+      if (!area.letterBagSize) return;
+      area.diagonal = null;
+      area.content = area.content.slice(0, area.letterBagSize);
     }),
 
   divideArea: (areaId, contents, orientation = "auto") =>
@@ -562,8 +612,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const target = findAreaAt(draft.areas, cell.row, cell.column);
         if (target) {
           target.kind = "answer";
-          if (target.diagonal) {
-            const letters = Array.from(target.content.padEnd(2, " "));
+          if (target.diagonal || target.letterBagSize >= 3) {
+            const capacity = target.letterBagSize >= 3 ? target.letterBagSize : 2;
+            const letters = Array.from(target.content.padEnd(capacity, " "));
             const key = `${cell.row}:${cell.column}`;
             const occurrence = diagonalOccurrences.get(key) ?? 0;
             const repeatedInWord =
@@ -571,9 +622,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
                 .length > 1;
             const letterIndex = repeatedInWord
               ? occurrence
-              : endDirection === "up" || endDirection === "down"
+              : target.diagonal && (endDirection === "up" || endDirection === "down")
                 ? 0
-                : 1;
+                : target.diagonal
+                  ? 1
+                  : Math.min(occurrence, capacity - 1);
             letters[letterIndex] = units[index];
             target.content = letters.join("").trimEnd();
             diagonalOccurrences.set(key, occurrence + 1);
