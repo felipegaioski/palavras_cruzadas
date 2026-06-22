@@ -416,6 +416,9 @@ function PropertiesPanel({
 
   useEffect(() => {
     setDivisionEnabled((selectedArea?.clueRegions.length ?? 0) > 1);
+    setDivisionCount(2);
+    setDivisionTexts(["", ""]);
+    setDivisionOrientation("auto");
   }, [selectedArea?.id]);
 
   if (!selectedArea) {
@@ -522,7 +525,7 @@ function PropertiesPanel({
               <strong>Letra-resposta</strong>
               <small>
                 {selectedArea.directResponseNumber
-                  ? `NÃºmero ${selectedArea.directResponseNumber}`
+                  ? `Número ${selectedArea.directResponseNumber}`
                   : "Desativada"}
               </small>
             </span>
@@ -539,7 +542,7 @@ function PropertiesPanel({
           </label>
           {selectedArea.directResponseNumber && (
             <label>
-              NÃºmero da letra
+              Número da letra
               <input
                 type="number"
                 min={1}

@@ -110,7 +110,7 @@ export const KIND_LABELS: Record<CrosswordKind, string> = {
   arrowless: "Sem setas",
   diagonalless: "Sem diagonal",
   directresponse: "Direta resposta",
-  letterbag: "BolsÃ£o de letras",
+  letterbag: "Bolsão de letras",
   thematic: "Temática"
 };
 

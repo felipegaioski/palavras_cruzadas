@@ -2,6 +2,7 @@ import type {
   Area,
   CellCoordinate,
   Crossword,
+  Diagonal,
   Direction,
   Word
 } from "./types.js";
@@ -86,6 +87,27 @@ export function stepFor(direction: Direction): CellCoordinate {
     case "right":
       return { row: 0, column: 1 };
   }
+}
+
+export function diagonalLetterSlot(
+  diagonal: Diagonal,
+  direction: Direction,
+  occurrence: number
+): number {
+  if (!diagonal) return 0;
+  const firstSlot =
+    direction === "up"
+      ? 1
+      : direction === "down"
+        ? 0
+        : diagonal === "down"
+          ? direction === "right"
+            ? 1
+            : 0
+          : direction === "right"
+            ? 0
+            : 1;
+  return occurrence % 2 === 0 ? firstSlot : 1 - firstSlot;
 }
 
 export function firstCellFromArea(
@@ -209,13 +231,13 @@ export function responseValues(crossword: Crossword): Map<string, string> {
         const occurrence = diagonalOccurrences.get(key) ?? 0;
         const repeatedInWord =
           word.cells.filter((item) => cellKey(item) === key).length > 1;
-        const letterIndex = repeatedInWord
-          ? occurrence
-          : area.diagonal && (word.direction === "up" || word.direction === "down")
-            ? 0
-            : area.diagonal
-              ? 1
-              : Math.min(occurrence, capacity - 1);
+        const letterIndex = area.diagonal
+          ? diagonalLetterSlot(
+              area.diagonal,
+              word.direction,
+              repeatedInWord ? occurrence : 0
+            )
+          : Math.min(occurrence, capacity - 1);
         letters[letterIndex] = units[index];
         result.set(key, letters.join("").trimEnd());
         diagonalOccurrences.set(key, occurrence + 1);

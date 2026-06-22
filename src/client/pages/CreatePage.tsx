@@ -57,13 +57,14 @@ export function CreatePage() {
             <div className="choice-grid">
               {(
                 [
-                  ["direct", "Direta", "Uma letra por quadrado"],
-                  ["syllabic", "Silábica", "Uma sílaba por quadrado"],
-                  ["arrowless", "Sem setas", "Enunciados sem indicação visual"],
-                  ["thematic", "Temática", "Alguns enunciados viram tema"],
-                  ["diagonalless", "Sem diagonal", "Mostra a quantidade de letras"],
-                  ["directresponse", "Direta resposta", "Forma uma palavra final"],
-                  ["letterbag", "Bolsão de letras", "Células com três ou mais letras"]
+                // [value, Título, Descrição]
+                  ["direct", "Direta", ""],
+                  ["syllabic", "Silábica", ""],
+                  ["arrowless", "Sem setas", ""],
+                  ["thematic", "Temática", ""],
+                  ["diagonalless", "Sem diagonal", ""],
+                  ["directresponse", "Direta resposta", ""],
+                  ["letterbag", "Bolsão de letras", ""]
                 ] as const
               ).map(([value, label, help]) => (
                 <label

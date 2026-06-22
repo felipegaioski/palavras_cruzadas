@@ -202,13 +202,20 @@ export function PrintPage() {
                 key={pageIndex}
               >
                 {page.map((crossword) => (
-                  <article className="print-crossword" key={crossword.id}>
-                    <header>
-                      <div>
-                        <span>{KIND_LABELS[crossword.kind]}</span>
-                        <h2>{crossword.title}</h2>
-                      </div>
-                    </header>
+                  <article
+                    className={`print-crossword ${
+                      mode === "answer" ? "is-answer" : ""
+                    }`}
+                    key={crossword.id}
+                  >
+                    {mode === "activity" && (
+                      <header>
+                        <div>
+                          <span>{KIND_LABELS[crossword.kind]}</span>
+                          <h2>{crossword.title}</h2>
+                        </div>
+                      </header>
+                    )}
                     {mode === "activity" &&
                       crossword.kind === "thematic" &&
                       crossword.themeDescription && (
@@ -234,7 +241,7 @@ export function PrintPage() {
                       answerSheet={mode === "answer"}
                       readOnly
                     />
-                    {crossword.wordBank.length > 0 && (
+                    {mode === "activity" && crossword.wordBank.length > 0 && (
                       <footer className="printed-bank">
                         <strong>BANCO</strong>
                         <span>{crossword.wordBank.join(" · ")}</span>

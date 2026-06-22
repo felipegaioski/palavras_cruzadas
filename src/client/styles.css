@@ -731,11 +731,11 @@ legend {
 }
 
 .grid-zoom {
-  min-width: 280px;
   transition: width 120ms ease;
 }
 
 .grid-zoom .crossword-grid {
+  min-width: 0;
   width: 100%;
   max-width: none;
 }
@@ -1359,6 +1359,15 @@ legend {
   align-content: start;
   overflow: hidden;
   break-inside: avoid;
+}
+
+.print-crossword.is-answer {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.print-crossword.is-answer .crossword-grid {
+  width: 100%;
+  max-height: 100%;
 }
 
 .print-crossword > header {

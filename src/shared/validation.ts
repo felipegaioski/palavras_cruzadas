@@ -70,7 +70,7 @@ function validateAreas(crossword: Crossword): void {
         area.directResponseNumber < 1 ||
         area.directResponseNumber > 99)
     ) {
-      throw new Error("Uma letra-resposta possui nÃºmero invÃ¡lido.");
+      throw new Error("Uma letra-resposta possui número inválido.");
     }
     if (
       area.letterBagSize !== 0 &&
@@ -78,7 +78,7 @@ function validateAreas(crossword: Crossword): void {
         area.letterBagSize < 3 ||
         area.letterBagSize > 12)
     ) {
-      throw new Error("Um bolsÃ£o de letras possui quantidade invÃ¡lida.");
+      throw new Error("Um bolsão de letras possui quantidade inválida.");
     }
     validateResponseContent(area, crossword.kind);
   }

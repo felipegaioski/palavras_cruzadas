@@ -118,7 +118,7 @@ describe("estado do editor", () => {
       .upsertWord(clue.clueRegions[0].id, "ABC", "right", "right");
 
     const current = useEditorStore.getState().crossword!;
-    expect(current.areas.find((area) => area.id === diagonal.id)?.content).toBe("AB");
+    expect(current.areas.find((area) => area.id === diagonal.id)?.content).toBe("BA");
     expect(
       current.areas.find((area) => area.row === 2 && area.column === 3)?.content
     ).toBe("C");
@@ -127,6 +127,32 @@ describe("estado do editor", () => {
       { row: 2, column: 2 },
       { row: 2, column: 3 }
     ]);
+  });
+
+  it("respeita a orientacao da diagonal ao ordenar letras", () => {
+    const store = useEditorStore.getState();
+    store.setTool("clue");
+    store.applyToolAt(2, 1);
+    const clue = useEditorStore.getState().crossword!.areas.find(
+      (area) => area.row === 2 && area.column === 1
+    )!;
+    const diagonal = useEditorStore.getState().crossword!.areas.find(
+      (area) => area.row === 2 && area.column === 2
+    )!;
+
+    useEditorStore.getState().setTool("answer");
+    useEditorStore.getState().applyToolAt(2, 2);
+    useEditorStore.getState().setTool("diagonal");
+    useEditorStore.getState().applyToolAt(2, 2);
+    useEditorStore.getState().applyToolAt(2, 2);
+    useEditorStore
+      .getState()
+      .upsertWord(clue.clueRegions[0].id, "ABC", "right", "right");
+
+    expect(
+      useEditorStore.getState().crossword!.areas.find((area) => area.id === diagonal.id)
+        ?.content
+    ).toBe("AB");
   });
 
   it("preenche varias letras ao atravessar um bolsao de letras", () => {

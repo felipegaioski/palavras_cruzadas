@@ -10,6 +10,7 @@ import {
   FULL_POLYGON,
   buildWordCells,
   createEmptyArea,
+  diagonalLetterSlot,
   findAreaAt,
   normalizeAnswer
 } from "../../shared/grid";
@@ -426,13 +427,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
               cellIndexes.length > 1
             ) {
               cellIndexes.forEach((cellIndex, index) => {
-                units[cellIndex] = normalized[index] ?? "";
+                const sourceIndex = area.diagonal
+                  ? diagonalLetterSlot(area.diagonal, word.direction, index)
+                  : index;
+                units[cellIndex] = normalized[sourceIndex] ?? "";
               });
             } else {
               const cellValue =
                 area.diagonal && normalized.length > 1
                   ? normalized[
-                      word.direction === "up" || word.direction === "down" ? 0 : 1
+                      diagonalLetterSlot(area.diagonal, word.direction, 0)
                     ] ?? normalized[0]
                   : normalized;
               units[cellIndexes[0]] = cellValue;
@@ -620,13 +624,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             const repeatedInWord =
               cells.filter((item) => item.row === cell.row && item.column === cell.column)
                 .length > 1;
-            const letterIndex = repeatedInWord
-              ? occurrence
-              : target.diagonal && (endDirection === "up" || endDirection === "down")
-                ? 0
-                : target.diagonal
-                  ? 1
-                  : Math.min(occurrence, capacity - 1);
+            const letterIndex = target.diagonal
+              ? diagonalLetterSlot(
+                  target.diagonal,
+                  endDirection,
+                  repeatedInWord ? occurrence : 0
+                )
+              : Math.min(occurrence, capacity - 1);
             letters[letterIndex] = units[index];
             target.content = letters.join("").trimEnd();
             diagonalOccurrences.set(key, occurrence + 1);
