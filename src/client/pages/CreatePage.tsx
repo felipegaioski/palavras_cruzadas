@@ -59,7 +59,8 @@ export function CreatePage() {
                 [
                   ["direct", "Direta", "Uma letra por quadrado"],
                   ["syllabic", "Silábica", "Uma sílaba por quadrado"],
-                  ["arrowless", "Sem setas", "Enunciados sem indicação visual"]
+                  ["arrowless", "Sem setas", "Enunciados sem indicação visual"],
+                  ["thematic", "Temática", "Alguns enunciados viram tema"]
                 ] as const
               ).map(([value, label, help]) => (
                 <label

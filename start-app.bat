@@ -3,7 +3,7 @@ setlocal ENABLEDELAYEDEXPANSION
 cd /d "%~dp0"
 
 :: --- CONFIGURAÇÃO PORTÁTIL / CUSTOMIZADA ---
-:: set "NODE_DIR=C:\laragon\bin\nodejs\node-v18"
+set "NODE_DIR=C:\laragon\bin\nodejs\node-v18"
 
 :: Se a variável NODE_DIR foi definida acima, injeta ela no PATH
 if defined NODE_DIR (
@@ -35,7 +35,7 @@ if not exist node_modules (
     call npm install
     if errorlevel 1 exit /b 1
 )
-
+ 
 echo Verificando o SQLite...
 node -e "const D=require('better-sqlite3'); const db=new D(':memory:'); db.close()" 2>nul
 if errorlevel 1 (

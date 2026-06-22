@@ -4,6 +4,7 @@ export const crosswords = sqliteTable("crosswords", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   title: text("title").notNull(),
   kind: text("kind").notNull(),
+  themeDescription: text("theme_description").notNull().default(""),
   rows: integer("rows").notNull(),
   columns: integer("columns").notNull(),
   wordBank: text("word_bank").notNull().default("[]"),
@@ -33,6 +34,7 @@ export const clueRegions = sqliteTable("clue_regions", {
     .notNull()
     .references(() => areas.id, { onDelete: "cascade" }),
   content: text("content").notNull().default(""),
+  isThematic: integer("is_thematic", { mode: "boolean" }).notNull().default(false),
   polygon: text("polygon").notNull(),
   position: integer("position").notNull()
 });

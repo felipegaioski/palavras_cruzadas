@@ -266,6 +266,18 @@ export function EditorPage() {
               </div>
             </div>
           </div>
+          {crossword.kind === "thematic" && (
+            <label className="theme-editor">
+              Tema
+              <input
+                value={crossword.themeDescription}
+                onChange={(event) =>
+                  state.updateMetadata({ themeDescription: event.target.value })
+                }
+                placeholder="Ex.: Cargos da Igreja Católica"
+              />
+            </label>
+          )}
           <div className="grid-scroll">
             <div className="grid-zoom" style={{ width: `${zoom * 100}%` }}>
               <CrosswordGrid
@@ -442,10 +454,29 @@ function PropertiesPanel({
 
       {selectedArea.kind === "clue" && selectedRegion && (
         <>
+          {crossword.kind === "thematic" && (
+            <label className="division-toggle">
+              <span>
+                <strong>Temática</strong>
+                <small>{selectedRegion.isThematic ? "Ativa" : "Desativada"}</small>
+              </span>
+              <input
+                type="checkbox"
+                checked={selectedRegion.isThematic}
+                onChange={(event) =>
+                  state.updateRegionThematic(
+                    selectedRegion.id,
+                    event.target.checked
+                  )
+                }
+              />
+            </label>
+          )}
           <label>
             Texto do enunciado
             <textarea
-              value={selectedRegion.content}
+              disabled={selectedRegion.isThematic}
+              value={selectedRegion.isThematic ? "" : selectedRegion.content}
               onChange={(event) =>
                 state.updateRegionContent(selectedRegion.id, event.target.value)
               }
@@ -453,7 +484,7 @@ function PropertiesPanel({
               placeholder="Digite a pergunta ou definição"
             />
           </label>
-          {!textLikelyFits(
+          {!selectedRegion.isThematic && !textLikelyFits(
             selectedRegion.content,
             selectedRegion.polygon,
             selectedArea.columnSpan * 56,

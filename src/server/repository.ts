@@ -31,6 +31,7 @@ export function listCrosswords(search = ""): CrosswordSummary[] {
       id: crosswordsTable.id,
       title: crosswordsTable.title,
       kind: crosswordsTable.kind,
+      themeDescription: crosswordsTable.themeDescription,
       rows: crosswordsTable.rows,
       columns: crosswordsTable.columns,
       updatedAt: crosswordsTable.updatedAt,
@@ -61,6 +62,7 @@ export function createCrossword(input: CreateCrosswordInput): Crossword {
     .values({
       title: input.title.trim(),
       kind: input.kind,
+      themeDescription: input.themeDescription?.trim() ?? "",
       rows: input.rows,
       columns: input.columns,
       wordBank: "[]",
@@ -74,6 +76,7 @@ export function createCrossword(input: CreateCrosswordInput): Crossword {
     id: inserted.id,
     title: input.title.trim(),
     kind: input.kind,
+    themeDescription: input.themeDescription?.trim() ?? "",
     rows: input.rows,
     columns: input.columns,
     areas: createEmptyAreas(input.rows, input.columns),
@@ -131,6 +134,7 @@ export function getCrossword(id: number): Crossword {
     const item: ClueRegion = {
       id: region.clientId,
       content: region.content,
+      isThematic: region.isThematic,
       polygon: parseJson<Point[]>(region.polygon, []),
       arrows: arrowRows
         .filter((arrow) => arrow.clueRegionId === region.id)
@@ -152,6 +156,7 @@ export function getCrossword(id: number): Crossword {
     id: crosswordRow.id,
     title: crosswordRow.title,
     kind: crosswordRow.kind as CrosswordKind,
+    themeDescription: crosswordRow.themeDescription ?? "",
     rows: crosswordRow.rows,
     columns: crosswordRow.columns,
     wordBank: parseJson<string[]>(crosswordRow.wordBank, []),
@@ -199,6 +204,7 @@ export function saveCrossword(id: number, crossword: Crossword): Crossword {
       .set({
         title: crossword.title.trim(),
         kind: crossword.kind,
+        themeDescription: crossword.themeDescription.trim(),
         rows: crossword.rows,
         columns: crossword.columns,
         wordBank: JSON.stringify(crossword.wordBank),
@@ -244,6 +250,7 @@ function persistChildren(
           clientId: region.id,
           areaId: insertedArea.id,
           content: region.content,
+          isThematic: region.isThematic,
           polygon: JSON.stringify(region.polygon),
           position
         })
@@ -297,6 +304,7 @@ export function duplicateCrossword(id: number): Crossword {
     .values({
       title: `${source.title} - cópia`,
       kind: source.kind,
+      themeDescription: source.themeDescription,
       rows: source.rows,
       columns: source.columns,
       wordBank: JSON.stringify(source.wordBank),

@@ -303,8 +303,11 @@ function AreaView({
                 )}
                 pointerEvents="none"
               >
-                <div className="clue-text" title={region.content}>
-                  {region.content || "Enunciado"}
+                <div
+                  className={`clue-text ${region.isThematic ? "is-thematic" : ""}`}
+                  title={region.isThematic ? "Temática" : region.content}
+                >
+                  {region.isThematic ? "*" : region.content || "Enunciado"}
                 </div>
               </foreignObject>
             </g>
@@ -388,9 +391,16 @@ function ArrowView({
     x: (rectangle.left + rectangle.right) / 2,
     y: (rectangle.top + rectangle.bottom) / 2
   };
-  const path = arrowPointsInCell(
+  const clueBounds = {
+    left: area.column * CELL + rectangle.left * width,
+    top: area.row * CELL + rectangle.top * height,
+    right: area.column * CELL + rectangle.right * width,
+    bottom: area.row * CELL + rectangle.bottom * height
+  };
+  const path = arrowPointsFromClue(
     startSide,
     endDirection,
+    clueBounds,
     cellBounds,
     regionCenter
   )
@@ -485,6 +495,67 @@ function arrowPointsInCell(
         inward.y + endVector.y * leg,
         bounds.top + inset,
         bounds.bottom - inset
+      )
+    }
+  ];
+}
+
+function arrowPointsFromClue(
+  startSide: Direction,
+  direction: Direction,
+  clueBounds: { left: number; top: number; right: number; bottom: number },
+  cellBounds: { left: number; top: number; right: number; bottom: number },
+  alignment: Point
+): Point[] {
+  const inset = 15;
+  const straightLength = 22;
+  const vector = directionVector(direction);
+  const center = {
+    x: cellBounds.left + (cellBounds.right - cellBounds.left) / 2,
+    y: cellBounds.top + (cellBounds.bottom - cellBounds.top) / 2
+  };
+  const start =
+    startSide === "left"
+      ? {
+          x: clueBounds.left,
+          y: clueBounds.top + (clueBounds.bottom - clueBounds.top) * alignment.y
+        }
+      : startSide === "right"
+        ? {
+            x: clueBounds.right,
+            y: clueBounds.top + (clueBounds.bottom - clueBounds.top) * alignment.y
+          }
+        : startSide === "up"
+          ? {
+              x: clueBounds.left + (clueBounds.right - clueBounds.left) * alignment.x,
+              y: clueBounds.top
+            }
+          : {
+              x: clueBounds.left + (clueBounds.right - clueBounds.left) * alignment.x,
+              y: clueBounds.bottom
+            };
+  const entry =
+    direction === "right"
+      ? { x: cellBounds.left + inset, y: center.y }
+      : direction === "left"
+        ? { x: cellBounds.right - inset, y: center.y }
+        : direction === "down"
+          ? { x: center.x, y: cellBounds.top + inset }
+          : { x: center.x, y: cellBounds.bottom - inset };
+
+  return [
+    start,
+    entry,
+    {
+      x: clamp(
+        entry.x + vector.x * straightLength,
+        cellBounds.left + inset,
+        cellBounds.right - inset
+      ),
+      y: clamp(
+        entry.y + vector.y * straightLength,
+        cellBounds.top + inset,
+        cellBounds.bottom - inset
       )
     }
   ];

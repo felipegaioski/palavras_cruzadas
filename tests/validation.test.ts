@@ -10,6 +10,7 @@ function crossword(): Crossword {
     id: 1,
     title: "Teste",
     kind: "direct",
+    themeDescription: "",
     rows: 5,
     columns: 5,
     areas: createEmptyAreas(5, 5),
@@ -49,12 +50,14 @@ describe("validação", () => {
         {
           id: "r1",
           content: "Primeira",
+          isThematic: false,
           polygon: FULL_POLYGON,
           arrows: []
         },
         {
           id: "r2",
           content: "Segunda",
+          isThematic: false,
           polygon: FULL_POLYGON,
           arrows: []
         }

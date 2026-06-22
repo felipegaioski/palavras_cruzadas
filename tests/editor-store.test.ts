@@ -7,6 +7,7 @@ function sample(): Crossword {
     id: 99,
     title: "Editor",
     kind: "direct",
+    themeDescription: "",
     rows: 5,
     columns: 5,
     areas: createEmptyAreas(5, 5),

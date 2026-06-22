@@ -222,7 +222,7 @@ legend {
 
 .choice-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 10px;
 }
 
@@ -685,6 +685,11 @@ legend {
   gap: 14px;
 }
 
+.theme-editor {
+  max-width: 760px;
+  margin-bottom: 12px;
+}
+
 .zoom-controls {
   display: flex;
   align-items: center;
@@ -805,6 +810,12 @@ legend {
   overflow-wrap: anywhere;
   align-items: center;
   justify-content: center;
+}
+
+.clue-text.is-thematic {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(24px, 3vw, 38px);
+  font-weight: 800;
 }
 
 .answer {
@@ -1304,6 +1315,14 @@ legend {
   margin: 1mm 0 0;
   font-family: Arial, sans-serif;
   font-size: 16pt;
+}
+
+.printed-theme {
+  margin: -2mm 0 3mm;
+  font-family: Arial, sans-serif;
+  font-size: 10pt;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 .print-crossword > header small {

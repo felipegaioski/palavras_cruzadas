@@ -4,6 +4,7 @@ CREATE TABLE `crosswords` (
   `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
   `title` text NOT NULL,
   `kind` text NOT NULL,
+  `theme_description` text DEFAULT '' NOT NULL,
   `rows` integer NOT NULL,
   `columns` integer NOT NULL,
   `word_bank` text DEFAULT '[]' NOT NULL,
@@ -30,6 +31,7 @@ CREATE TABLE `clue_regions` (
   `client_id` text NOT NULL,
   `area_id` integer NOT NULL,
   `content` text DEFAULT '' NOT NULL,
+  `is_thematic` integer DEFAULT 0 NOT NULL,
   `polygon` text NOT NULL,
   `position` integer NOT NULL,
   FOREIGN KEY (`area_id`) REFERENCES `areas`(`id`) ON DELETE cascade

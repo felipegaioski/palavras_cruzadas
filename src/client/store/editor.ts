@@ -42,8 +42,11 @@ interface EditorState {
   selectArea: (areaId: string, regionId?: string) => void;
   selectWord: (wordId: string) => void;
   applyToolAt: (row: number, column: number) => void;
-  updateMetadata: (values: Partial<Pick<Crossword, "title" | "kind">>) => void;
+  updateMetadata: (
+    values: Partial<Pick<Crossword, "title" | "kind" | "themeDescription">>
+  ) => void;
   updateAreaContent: (areaId: string, content: string) => void;
+  updateRegionThematic: (regionId: string, isThematic: boolean) => void;
   divideArea: (
     areaId: string,
     contents: string[],
@@ -118,6 +121,7 @@ function regionForArea(area: Area) {
   return {
     id: makeId("region"),
     content: area.content,
+    isThematic: false,
     polygon: FULL_POLYGON.map((point) => ({ ...point })),
     arrows: []
   };
@@ -139,7 +143,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   load: (crossword) => {
     const normalized = cloneCrossword(crossword);
+    normalized.themeDescription ??= "";
     normalized.areas.forEach((area) => {
+      area.clueRegions.forEach((region) => {
+        region.isThematic ??= false;
+      });
       if (
         area.clueRegions.length > 1 &&
         area.clueRegions.some(
@@ -428,6 +436,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       area.clueRegions = contents.map((content, index) => ({
         id: makeId("region"),
         content,
+        isThematic: false,
         polygon: polygons[index],
         arrows: []
       }));
@@ -483,7 +492,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const region = draft.areas
         .flatMap((area) => area.clueRegions)
         .find((item) => item.id === regionId);
-      if (region) region.content = content;
+      if (region) {
+        region.content = content;
+        if (content.trim()) region.isThematic = false;
+      }
+    }),
+
+  updateRegionThematic: (regionId, isThematic) =>
+    commit(set, (draft) => {
+      const region = draft.areas
+        .flatMap((area) => area.clueRegions)
+        .find((item) => item.id === regionId);
+      if (!region) return;
+      region.isThematic = isThematic;
+      if (isThematic) region.content = "";
     }),
 
   upsertWord: (regionId, answer, startSide, endDirection, wordId) =>

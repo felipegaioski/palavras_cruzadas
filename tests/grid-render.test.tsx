@@ -28,6 +28,7 @@ describe("renderização da grade", () => {
       {
         id: "region",
         content: "Resposta distante",
+        isThematic: false,
         polygon: [
           { x: 0, y: 0 },
           { x: 1, y: 0 },
@@ -49,6 +50,7 @@ describe("renderização da grade", () => {
       id: 1,
       title: "Seta",
       kind: "direct",
+      themeDescription: "",
       rows: 10,
       columns: 10,
       areas: visibleAreas,

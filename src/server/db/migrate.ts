@@ -8,7 +8,8 @@ export function migrate(database: Database.Database): void {
     CREATE TABLE IF NOT EXISTS crosswords (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
-      kind TEXT NOT NULL CHECK (kind IN ('direct', 'syllabic', 'arrowless')),
+      kind TEXT NOT NULL CHECK (kind IN ('direct', 'syllabic', 'arrowless', 'thematic')),
+      theme_description TEXT NOT NULL DEFAULT '',
       rows INTEGER NOT NULL CHECK (rows BETWEEN 5 AND 30),
       columns INTEGER NOT NULL CHECK (columns BETWEEN 5 AND 30),
       word_bank TEXT NOT NULL DEFAULT '[]',
@@ -34,6 +35,7 @@ export function migrate(database: Database.Database): void {
       client_id TEXT NOT NULL,
       area_id INTEGER NOT NULL REFERENCES areas(id) ON DELETE CASCADE,
       content TEXT NOT NULL DEFAULT '',
+      is_thematic INTEGER NOT NULL DEFAULT 0,
       polygon TEXT NOT NULL,
       position INTEGER NOT NULL
     );
@@ -62,4 +64,66 @@ export function migrate(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_arrows_region ON arrows(clue_region_id);
     CREATE INDEX IF NOT EXISTS idx_words_crossword ON words(crossword_id);
   `);
+
+  const crosswordColumns = database
+    .prepare("PRAGMA table_info(crosswords)")
+    .all() as Array<{ name: string }>;
+  if (!crosswordColumns.some((column) => column.name === "theme_description")) {
+    database.exec("ALTER TABLE crosswords ADD COLUMN theme_description TEXT NOT NULL DEFAULT '';");
+  }
+
+  const clueRegionColumns = database
+    .prepare("PRAGMA table_info(clue_regions)")
+    .all() as Array<{ name: string }>;
+  if (!clueRegionColumns.some((column) => column.name === "is_thematic")) {
+    database.exec("ALTER TABLE clue_regions ADD COLUMN is_thematic INTEGER NOT NULL DEFAULT 0;");
+  }
+
+  const crosswordSql = database
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'crosswords'")
+    .get() as { sql?: string } | undefined;
+  if (crosswordSql?.sql && !crosswordSql.sql.includes("'thematic'")) {
+    database.exec(`
+      PRAGMA foreign_keys = OFF;
+
+      CREATE TABLE crosswords_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('direct', 'syllabic', 'arrowless', 'thematic')),
+        theme_description TEXT NOT NULL DEFAULT '',
+        rows INTEGER NOT NULL CHECK (rows BETWEEN 5 AND 30),
+        columns INTEGER NOT NULL CHECK (columns BETWEEN 5 AND 30),
+        word_bank TEXT NOT NULL DEFAULT '[]',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      INSERT INTO crosswords_new (
+        id,
+        title,
+        kind,
+        theme_description,
+        rows,
+        columns,
+        word_bank,
+        created_at,
+        updated_at
+      )
+      SELECT
+        id,
+        title,
+        kind,
+        theme_description,
+        rows,
+        columns,
+        word_bank,
+        created_at,
+        updated_at
+      FROM crosswords;
+
+      DROP TABLE crosswords;
+      ALTER TABLE crosswords_new RENAME TO crosswords;
+      PRAGMA foreign_keys = ON;
+    `);
+  }
 }

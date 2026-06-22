@@ -209,6 +209,13 @@ export function PrintPage() {
                         <h2>{crossword.title}</h2>
                       </div>
                     </header>
+                    {mode === "activity" &&
+                      crossword.kind === "thematic" &&
+                      crossword.themeDescription && (
+                        <p className="printed-theme">
+                          {crossword.themeDescription}
+                        </p>
+                      )}
                     <CrosswordGrid
                       crossword={crossword}
                       showAnswers={mode === "answer"}

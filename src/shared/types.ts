@@ -1,4 +1,4 @@
-export type CrosswordKind = "direct" | "syllabic" | "arrowless";
+export type CrosswordKind = "direct" | "syllabic" | "arrowless" | "thematic";
 export type AreaKind = "answer" | "clue" | "empty";
 export type Direction = "up" | "down" | "left" | "right";
 export type Diagonal = "down" | "up" | null;
@@ -23,6 +23,7 @@ export interface Arrow {
 export interface ClueRegion {
   id: string;
   content: string;
+  isThematic: boolean;
   polygon: Point[];
   arrows: Arrow[];
 }
@@ -51,6 +52,7 @@ export interface Crossword {
   id: number;
   title: string;
   kind: CrosswordKind;
+  themeDescription: string;
   rows: number;
   columns: number;
   areas: Area[];
@@ -64,6 +66,7 @@ export interface CrosswordSummary {
   id: number;
   title: string;
   kind: CrosswordKind;
+  themeDescription: string;
   rows: number;
   columns: number;
   wordCount: number;
@@ -73,6 +76,7 @@ export interface CrosswordSummary {
 export interface CreateCrosswordInput {
   title: string;
   kind: CrosswordKind;
+  themeDescription?: string;
   rows: number;
   columns: number;
 }
@@ -93,7 +97,8 @@ export const DIRECTIONS: Direction[] = ["up", "down", "left", "right"];
 export const KIND_LABELS: Record<CrosswordKind, string> = {
   direct: "Direta",
   syllabic: "Silábica",
-  arrowless: "Sem setas"
+  arrowless: "Sem setas",
+  thematic: "TemÃ¡tica"
 };
 
 export const DIRECTION_LABELS: Record<Direction, string> = {

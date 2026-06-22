@@ -34,6 +34,7 @@ describe("persistência SQLite", () => {
     clueArea.clueRegions = contents.map((content, index) => ({
       id: makeId("region"),
       content,
+      isThematic: index === 1,
       polygon: polygons[index],
       arrows: [
         {
@@ -64,6 +65,10 @@ describe("persistência SQLite", () => {
 
     expect(reopened.areas.find((area) => area.kind === "clue")?.clueRegions)
       .toHaveLength(2);
+    expect(
+      reopened.areas.find((area) => area.kind === "clue")?.clueRegions[1]
+        .isThematic
+    ).toBe(true);
     expect(reopened.words[0].answer).toBe("A");
     expect(reopened.wordBank).toEqual(["A"]);
   });
