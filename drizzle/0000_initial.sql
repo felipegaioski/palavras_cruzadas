@@ -32,6 +32,7 @@ CREATE TABLE `clue_regions` (
   `area_id` integer NOT NULL,
   `content` text DEFAULT '' NOT NULL,
   `is_thematic` integer DEFAULT 0 NOT NULL,
+  `answer_length` integer DEFAULT 0 NOT NULL,
   `polygon` text NOT NULL,
   `position` integer NOT NULL,
   FOREIGN KEY (`area_id`) REFERENCES `areas`(`id`) ON DELETE cascade

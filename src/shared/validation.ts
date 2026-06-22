@@ -20,7 +20,11 @@ export function validateDimensions(rows: number, columns: number): void {
 export function validateCrossword(crossword: Crossword): void {
   validateDimensions(crossword.rows, crossword.columns);
   if (!crossword.title.trim()) throw new Error("Informe um título.");
-  if (!["direct", "syllabic", "arrowless", "thematic"].includes(crossword.kind)) {
+  if (
+    !["direct", "syllabic", "arrowless", "thematic", "diagonalless"].includes(
+      crossword.kind
+    )
+  ) {
     throw new Error("Tipo de cruzada inválido.");
   }
   validateAreas(crossword);

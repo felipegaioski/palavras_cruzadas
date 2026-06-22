@@ -23,6 +23,7 @@ const CELL = 56;
 interface CrosswordGridProps {
   crossword: Crossword;
   showAnswers: boolean;
+  showDiagonals?: boolean;
   answerSheet?: boolean;
   readOnly?: boolean;
   selectedAreaId?: string | null;
@@ -41,6 +42,7 @@ interface CrosswordGridProps {
 export function CrosswordGrid({
   crossword,
   showAnswers,
+  showDiagonals = true,
   answerSheet = false,
   readOnly = false,
   selectedAreaId,
@@ -120,6 +122,7 @@ export function CrosswordGrid({
           selectedRegionId={selectedRegionId}
           selectedCells={selectedCells}
           showAnswers={showAnswers}
+          showDiagonals={showDiagonals}
           answerSheet={answerSheet}
           readOnly={readOnly}
           tool={tool}
@@ -214,6 +217,7 @@ interface AreaViewProps {
   selectedRegionId?: string | null;
   selectedCells: Set<string>;
   showAnswers: boolean;
+  showDiagonals: boolean;
   answerSheet: boolean;
   readOnly: boolean;
   tool: EditorTool;
@@ -228,6 +232,7 @@ function AreaView({
   selectedRegionId,
   selectedCells,
   showAnswers,
+  showDiagonals,
   answerSheet,
   readOnly,
   tool,
@@ -310,6 +315,18 @@ function AreaView({
                   {region.isThematic ? "*" : region.content || "Enunciado"}
                 </div>
               </foreignObject>
+              {crossword.kind === "diagonalless" &&
+                region.answerLength > 0 &&
+                rectangle && (
+                  <text
+                    className="clue-answer-length"
+                    x={x + rectangle.right * width - 5}
+                    y={y + rectangle.bottom * height - 5}
+                    textAnchor="end"
+                  >
+                    {region.answerLength}
+                  </text>
+                )}
             </g>
           );
         })}
@@ -347,7 +364,7 @@ function AreaView({
           </text>
         )
       )}
-      {area.diagonal && (
+      {area.diagonal && showDiagonals && (
         <line
           className="diagonal"
           x1={area.diagonal === "down" ? x : x + width}

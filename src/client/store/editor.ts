@@ -47,6 +47,7 @@ interface EditorState {
   ) => void;
   updateAreaContent: (areaId: string, content: string) => void;
   updateRegionThematic: (regionId: string, isThematic: boolean) => void;
+  updateRegionAnswerLength: (regionId: string, answerLength: number) => void;
   divideArea: (
     areaId: string,
     contents: string[],
@@ -122,6 +123,7 @@ function regionForArea(area: Area) {
     id: makeId("region"),
     content: area.content,
     isThematic: false,
+    answerLength: 0,
     polygon: FULL_POLYGON.map((point) => ({ ...point })),
     arrows: []
   };
@@ -147,6 +149,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     normalized.areas.forEach((area) => {
       area.clueRegions.forEach((region) => {
         region.isThematic ??= false;
+        region.answerLength ??= 0;
       });
       if (
         area.clueRegions.length > 1 &&
@@ -437,6 +440,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         id: makeId("region"),
         content,
         isThematic: false,
+        answerLength: 0,
         polygon: polygons[index],
         arrows: []
       }));
@@ -508,6 +512,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (isThematic) region.content = "";
     }),
 
+  updateRegionAnswerLength: (regionId, answerLength) =>
+    commit(set, (draft) => {
+      const region = draft.areas
+        .flatMap((area) => area.clueRegions)
+        .find((item) => item.id === regionId);
+      if (!region) return;
+      region.answerLength = Math.max(0, Math.min(99, Math.floor(answerLength)));
+    }),
+
   upsertWord: (regionId, answer, startSide, endDirection, wordId) =>
     commit(set, (draft) => {
       const area = draft.areas.find((item) =>
@@ -524,6 +537,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (draft.kind === "syllabic" && units.some((unit) => unit.length > 5)) {
         throw new Error("Cada sílaba pode ter no máximo cinco caracteres.");
       }
+      region.answerLength = units.length;
       const cells = buildWordCells(
         area,
         startSide,

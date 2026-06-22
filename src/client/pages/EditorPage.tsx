@@ -33,6 +33,7 @@ export function EditorPage() {
   const [loadError, setLoadError] = useState("");
   const [sideTab, setSideTab] = useState<"properties" | "words">("properties");
   const [zoom, setZoom] = useState(0.5);
+  const [showDiagonals, setShowDiagonals] = useState(true);
   const [bankText, setBankText] = useState("");
   const state = useEditorStore();
 
@@ -198,6 +199,11 @@ export function EditorPage() {
           <button onClick={state.toggleAnswers}>
             {state.showAnswers ? "Ocultar respostas" : "Mostrar respostas"}
           </button>
+          {crossword.kind === "diagonalless" && (
+            <button onClick={() => setShowDiagonals((value) => !value)}>
+              {showDiagonals ? "Ocultar diagonais" : "Mostrar diagonais"}
+            </button>
+          )}
           <Link
             to={`/print?ids=${crossword.id}`}
             className="primary-button compact"
@@ -287,6 +293,9 @@ export function EditorPage() {
                 selectedRegionId={state.selectedRegionId}
                 selectedWordId={state.selectedWordId}
                 tool={state.tool}
+                showDiagonals={
+                  crossword.kind === "diagonalless" ? showDiagonals : true
+                }
                 onCellClick={state.applyToolAt}
                 onRegionClick={state.selectArea}
                 onMoveDivider={state.moveRegionDivider}
@@ -494,6 +503,23 @@ function PropertiesPanel({
               O texto está apertado. Aumente a área, reduza o enunciado ou redistribua
               as divisões.
             </div>
+          )}
+          {crossword.kind === "diagonalless" && (
+            <label>
+              Quantidade de letras
+              <input
+                type="number"
+                min={0}
+                max={99}
+                value={selectedRegion.answerLength}
+                onChange={(event) =>
+                  state.updateRegionAnswerLength(
+                    selectedRegion.id,
+                    Number(event.target.value)
+                  )
+                }
+              />
+            </label>
           )}
           {selectedArea.clueRegions.length > 1 && (
             <div className="region-picker">

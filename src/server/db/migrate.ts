@@ -8,7 +8,7 @@ export function migrate(database: Database.Database): void {
     CREATE TABLE IF NOT EXISTS crosswords (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
-      kind TEXT NOT NULL CHECK (kind IN ('direct', 'syllabic', 'arrowless', 'thematic')),
+      kind TEXT NOT NULL CHECK (kind IN ('direct', 'syllabic', 'arrowless', 'thematic', 'diagonalless')),
       theme_description TEXT NOT NULL DEFAULT '',
       rows INTEGER NOT NULL CHECK (rows BETWEEN 5 AND 30),
       columns INTEGER NOT NULL CHECK (columns BETWEEN 5 AND 30),
@@ -36,6 +36,7 @@ export function migrate(database: Database.Database): void {
       area_id INTEGER NOT NULL REFERENCES areas(id) ON DELETE CASCADE,
       content TEXT NOT NULL DEFAULT '',
       is_thematic INTEGER NOT NULL DEFAULT 0,
+      answer_length INTEGER NOT NULL DEFAULT 0,
       polygon TEXT NOT NULL,
       position INTEGER NOT NULL
     );
@@ -78,18 +79,21 @@ export function migrate(database: Database.Database): void {
   if (!clueRegionColumns.some((column) => column.name === "is_thematic")) {
     database.exec("ALTER TABLE clue_regions ADD COLUMN is_thematic INTEGER NOT NULL DEFAULT 0;");
   }
+  if (!clueRegionColumns.some((column) => column.name === "answer_length")) {
+    database.exec("ALTER TABLE clue_regions ADD COLUMN answer_length INTEGER NOT NULL DEFAULT 0;");
+  }
 
   const crosswordSql = database
     .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'crosswords'")
     .get() as { sql?: string } | undefined;
-  if (crosswordSql?.sql && !crosswordSql.sql.includes("'thematic'")) {
+  if (crosswordSql?.sql && !crosswordSql.sql.includes("'diagonalless'")) {
     database.exec(`
       PRAGMA foreign_keys = OFF;
 
       CREATE TABLE crosswords_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
-        kind TEXT NOT NULL CHECK (kind IN ('direct', 'syllabic', 'arrowless', 'thematic')),
+        kind TEXT NOT NULL CHECK (kind IN ('direct', 'syllabic', 'arrowless', 'thematic', 'diagonalless')),
         theme_description TEXT NOT NULL DEFAULT '',
         rows INTEGER NOT NULL CHECK (rows BETWEEN 5 AND 30),
         columns INTEGER NOT NULL CHECK (columns BETWEEN 5 AND 30),

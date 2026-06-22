@@ -29,6 +29,7 @@ describe("renderização da grade", () => {
         id: "region",
         content: "Resposta distante",
         isThematic: false,
+        answerLength: 0,
         polygon: [
           { x: 0, y: 0 },
           { x: 1, y: 0 },

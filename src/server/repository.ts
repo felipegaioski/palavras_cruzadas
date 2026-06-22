@@ -135,6 +135,7 @@ export function getCrossword(id: number): Crossword {
       id: region.clientId,
       content: region.content,
       isThematic: region.isThematic,
+      answerLength: region.answerLength,
       polygon: parseJson<Point[]>(region.polygon, []),
       arrows: arrowRows
         .filter((arrow) => arrow.clueRegionId === region.id)
@@ -251,6 +252,7 @@ function persistChildren(
           areaId: insertedArea.id,
           content: region.content,
           isThematic: region.isThematic,
+          answerLength: region.answerLength,
           polygon: JSON.stringify(region.polygon),
           position
         })

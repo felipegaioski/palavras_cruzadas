@@ -35,6 +35,7 @@ export const clueRegions = sqliteTable("clue_regions", {
     .references(() => areas.id, { onDelete: "cascade" }),
   content: text("content").notNull().default(""),
   isThematic: integer("is_thematic", { mode: "boolean" }).notNull().default(false),
+  answerLength: integer("answer_length").notNull().default(0),
   polygon: text("polygon").notNull(),
   position: integer("position").notNull()
 });

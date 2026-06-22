@@ -219,6 +219,11 @@ export function PrintPage() {
                     <CrosswordGrid
                       crossword={crossword}
                       showAnswers={mode === "answer"}
+                      showDiagonals={
+                        crossword.kind === "diagonalless"
+                          ? mode === "answer"
+                          : true
+                      }
                       answerSheet={mode === "answer"}
                       readOnly
                     />
