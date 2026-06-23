@@ -136,9 +136,10 @@ export function buildWordCells(
   rows: number,
   columns: number,
   areas: Area[] = [],
-  kind: Crossword["kind"] = "direct"
+  kind: Crossword["kind"] = "direct",
+  sourceCell?: CellCoordinate | null
 ): CellCoordinate[] {
-  const first = firstCellFromArea(area, startSide);
+  const first = sourceCell ?? firstCellFromArea(area, startSide);
   const step = stepFor(direction);
   const cells: CellCoordinate[] = [];
   for (let offset = 0; cells.length < length; offset += 1) {

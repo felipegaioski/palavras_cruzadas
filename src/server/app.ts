@@ -2,13 +2,20 @@ import fs from "node:fs";
 import path from "node:path";
 import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
-import type { CreateCrosswordInput, Crossword } from "../shared/types.js";
+import type {
+  CreateCrosswordInput,
+  CreateWordBankEntryInput,
+  Crossword
+} from "../shared/types.js";
 import {
   createCrossword,
+  createWordBankEntry,
   deleteCrossword,
+  deleteWordBankEntry,
   duplicateCrossword,
   getCrossword,
   listCrosswords,
+  listWordBankEntries,
   saveCrossword
 } from "./repository.js";
 
@@ -28,6 +35,19 @@ export function buildApp() {
   app.get("/api/crosswords", async (request) => {
     const query = request.query as { search?: string };
     return listCrosswords(query.search);
+  });
+  app.get("/api/word-bank", async (request) => {
+    const query = request.query as { search?: string };
+    return listWordBankEntries(query.search);
+  });
+  app.post("/api/word-bank", async (request, reply) => {
+    const body = request.body as CreateWordBankEntryInput;
+    return reply.code(201).send(createWordBankEntry(body.word));
+  });
+  app.delete("/api/word-bank/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    deleteWordBankEntry(Number(id));
+    return reply.code(204).send();
   });
   app.get("/api/crosswords/:id", async (request) => {
     const { id } = request.params as { id: string };

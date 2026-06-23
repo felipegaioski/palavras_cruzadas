@@ -1,7 +1,8 @@
 import type {
   CreateCrosswordInput,
   Crossword,
-  CrosswordSummary
+  CrosswordSummary,
+  WordBankEntry
 } from "../shared/types";
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
@@ -50,6 +51,20 @@ export const api = {
   },
   remove(id: number) {
     return request<void>(`/api/crosswords/${id}`, { method: "DELETE" });
+  },
+  listWordBank(search = "") {
+    return request<WordBankEntry[]>(
+      `/api/word-bank?search=${encodeURIComponent(search)}`
+    );
+  },
+  createWordBankEntry(word: string) {
+    return request<WordBankEntry>("/api/word-bank", {
+      method: "POST",
+      body: JSON.stringify({ word })
+    });
+  },
+  removeWordBankEntry(id: number) {
+    return request<void>(`/api/word-bank/${id}`, { method: "DELETE" });
   },
   shutdown() {
     return request<{ ok: boolean }>("/api/shutdown", { method: "POST" });

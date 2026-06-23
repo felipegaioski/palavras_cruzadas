@@ -25,6 +25,7 @@ export interface Arrow {
   startSide: Direction;
   endDirection: Direction;
   position: number;
+  sourceCell?: CellCoordinate | null;
 }
 
 export interface ClueRegion {
@@ -80,7 +81,28 @@ export interface CrosswordSummary {
   rows: number;
   columns: number;
   wordCount: number;
+  previewAreas: Array<
+    Pick<
+      Area,
+      | "id"
+      | "kind"
+      | "row"
+      | "column"
+      | "rowSpan"
+      | "columnSpan"
+      | "content"
+      | "diagonal"
+      | "letterBagSize"
+    >
+  >;
   updatedAt: string;
+}
+
+export interface WordBankEntry {
+  id: number;
+  word: string;
+  used: boolean;
+  createdAt: string;
 }
 
 export interface CreateCrosswordInput {
@@ -89,6 +111,10 @@ export interface CreateCrosswordInput {
   themeDescription?: string;
   rows: number;
   columns: number;
+}
+
+export interface CreateWordBankEntryInput {
+  word: string;
 }
 
 export type EditorTool =

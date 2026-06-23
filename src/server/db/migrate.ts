@@ -49,6 +49,8 @@ export function migrate(database: Database.Database): void {
       clue_region_id INTEGER NOT NULL REFERENCES clue_regions(id) ON DELETE CASCADE,
       start_side TEXT NOT NULL,
       end_direction TEXT NOT NULL,
+      source_row INTEGER,
+      source_column INTEGER,
       position INTEGER NOT NULL
     );
 
@@ -62,10 +64,17 @@ export function migrate(database: Database.Database): void {
       direction TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS word_bank_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      word TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_areas_crossword ON areas(crossword_id);
     CREATE INDEX IF NOT EXISTS idx_regions_area ON clue_regions(area_id);
     CREATE INDEX IF NOT EXISTS idx_arrows_region ON arrows(clue_region_id);
     CREATE INDEX IF NOT EXISTS idx_words_crossword ON words(crossword_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_word_bank_entries_word ON word_bank_entries(word);
   `);
 
   const crosswordColumns = database
@@ -93,6 +102,16 @@ export function migrate(database: Database.Database): void {
   }
   if (!areaColumns.some((column) => column.name === "letter_bag_size")) {
     database.exec("ALTER TABLE areas ADD COLUMN letter_bag_size INTEGER NOT NULL DEFAULT 0;");
+  }
+
+  const arrowColumns = database
+    .prepare("PRAGMA table_info(arrows)")
+    .all() as Array<{ name: string }>;
+  if (!arrowColumns.some((column) => column.name === "source_row")) {
+    database.exec("ALTER TABLE arrows ADD COLUMN source_row INTEGER;");
+  }
+  if (!arrowColumns.some((column) => column.name === "source_column")) {
+    database.exec("ALTER TABLE arrows ADD COLUMN source_column INTEGER;");
   }
 
   const crosswordSql = database

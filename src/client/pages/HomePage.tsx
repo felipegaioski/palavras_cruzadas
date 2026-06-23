@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
+import { Loader } from "../components/Loader";
 import { ShutdownButton } from "../components/ShutdownButton";
 import {
   KIND_LABELS,
@@ -14,8 +15,7 @@ type SortMode =
   | "title-asc"
   | "title-desc"
   | "words-desc";
-
-const PAGE_SIZE_OPTIONS = [6, 12, 24] as const;
+const PAGE_SIZE = 12;
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -24,8 +24,6 @@ export function HomePage() {
   const [kindFilter, setKindFilter] = useState<"all" | CrosswordKind>("all");
   const [sort, setSort] = useState<SortMode>("updated-desc");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] =
-    useState<(typeof PAGE_SIZE_OPTIONS)[number]>(12);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -51,7 +49,7 @@ export function HomePage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, kindFilter, sort, pageSize]);
+  }, [search, kindFilter, sort]);
 
   const duplicate = async (id: number) => {
     const created = await api.duplicate(id);
@@ -98,11 +96,11 @@ export function HomePage() {
     return result;
   }, [items, kindFilter, sort]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const pageCount = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
   const pageItems = filteredItems.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
   );
 
   return (
@@ -119,6 +117,9 @@ export function HomePage() {
         <div className="hero-actions">
           <Link to="/crosswords/create" className="primary-button">
             + Nova cruzada
+          </Link>
+          <Link to="/word-bank" className="secondary-button">
+            Banco de palavras
           </Link>
           <ShutdownButton />
         </div>
@@ -138,7 +139,7 @@ export function HomePage() {
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Digite parte do titulo"
+                placeholder="Digite parte do titulo ou da resposta"
               />
             </label>
             <label>
@@ -170,30 +171,20 @@ export function HomePage() {
                 <option value="words-desc">Mais palavras</option>
               </select>
             </label>
-            <label>
-              <span>Por pagina</span>
-              <select
-                value={pageSize}
-                onChange={(event) =>
-                  setPageSize(Number(event.target.value) as typeof pageSize)
-                }
-              >
-                {PAGE_SIZE_OPTIONS.map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-              </select>
-            </label>
             <Link to="/print" className="secondary-button">
               Imprimir varias
+            </Link>
+            <Link to="/word-bank" className="secondary-button">
+              Banco de palavras
             </Link>
           </div>
         </div>
 
         {error && <div className="notice error">{error}</div>}
         {loading ? (
-          <div className="empty-state">Carregando suas cruzadas...</div>
+          <div className="empty-state">
+            <Loader label="Carregando suas cruzadas..." />
+          </div>
         ) : filteredItems.length === 0 ? (
           <div className="empty-state">
             <div className="empty-illustration">A B C</div>
@@ -218,14 +209,7 @@ export function HomePage() {
             <div className="crossword-cards">
               {pageItems.map((item) => (
                 <article className="crossword-card" key={item.id}>
-                  <div className="card-preview" aria-hidden="true">
-                    {Array.from({ length: 35 }, (_, index) => (
-                      <span
-                        key={index}
-                        className={index % 7 === 0 ? "clue" : ""}
-                      />
-                    ))}
-                  </div>
+                  <CrosswordCardPreview item={item} />
                   <div className="card-body">
                     <div className="card-topline">
                       <span className="kind-badge">{KIND_LABELS[item.kind]}</span>
@@ -288,5 +272,54 @@ export function HomePage() {
         )}
       </section>
     </main>
+  );
+}
+
+function CrosswordCardPreview({ item }: { item: CrosswordSummary }) {
+  const previewRows = Math.max(
+    1,
+    Math.min(
+      6,
+      item.rows,
+      Math.max(
+        1,
+        ...item.previewAreas.map((area) => area.row + area.rowSpan)
+      )
+    )
+  );
+  return (
+    <div
+      className="card-preview"
+      aria-hidden="true"
+      style={{
+        gridTemplateColumns: `repeat(${item.columns}, minmax(0, 1fr))`,
+        gridTemplateRows: `repeat(${previewRows}, minmax(0, 1fr))`
+      }}
+    >
+      {item.previewAreas.length === 0
+        ? Array.from({ length: Math.min(item.rows, 6) * item.columns }, (_, index) => (
+            <span key={index} className="preview-cell" />
+          ))
+        : item.previewAreas.map((area) => (
+            <span
+              key={area.id}
+              className={[
+                "preview-cell",
+                `kind-${area.kind}`,
+                area.diagonal ? "has-diagonal" : "",
+                area.letterBagSize >= 3 ? "has-letter-bag" : ""
+              ].join(" ")}
+              style={{
+                gridColumn: `${area.column + 1} / span ${area.columnSpan}`,
+                gridRow: `${area.row + 1} / span ${Math.min(
+                  area.rowSpan,
+                  previewRows - area.row
+                )}`
+              }}
+            >
+              {area.kind === "answer" ? area.content.slice(0, 2) : ""}
+            </span>
+          ))}
+    </div>
   );
 }

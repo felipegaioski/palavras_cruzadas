@@ -17,6 +17,7 @@ import {
 import { makeId } from "../../shared/ids";
 import type {
   Area,
+  CellCoordinate,
   Crossword,
   Direction,
   EditorTool,
@@ -75,6 +76,7 @@ interface EditorState {
     answer: string,
     startSide: Direction,
     endDirection: Direction,
+    sourceCell?: CellCoordinate | null,
     wordId?: string
   ) => void;
   removeWord: (wordId: string) => void;
@@ -575,7 +577,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       region.answerLength = Math.max(0, Math.min(99, Math.floor(answerLength)));
     }),
 
-  upsertWord: (regionId, answer, startSide, endDirection, wordId) =>
+  upsertWord: (regionId, answer, startSide, endDirection, sourceCell, wordId) =>
     commit(set, (draft) => {
       const area = draft.areas.find((item) =>
         item.clueRegions.some((region) => region.id === regionId)
@@ -600,7 +602,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         draft.rows,
         draft.columns,
         draft.areas,
-        draft.kind
+        draft.kind,
+        sourceCell
       );
       if (cells.length !== units.length) {
         throw new Error("A resposta não cabe nessa direção.");
@@ -655,6 +658,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         id: region.arrows[arrowIndex]?.id ?? makeId("arrow"),
         startSide,
         endDirection,
+        sourceCell: sourceCell ?? null,
         position: arrowIndex
       };
       region.arrows = existing

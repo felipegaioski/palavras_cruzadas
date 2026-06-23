@@ -12,6 +12,7 @@ import {
 } from "../../shared/grid";
 import type {
   Area,
+  CellCoordinate,
   Crossword,
   Direction,
   EditorTool,
@@ -54,6 +55,8 @@ interface CrosswordGridProps {
   selectedAreaId?: string | null;
   selectedRegionId?: string | null;
   selectedWordId?: string | null;
+  selectedSourceCell?: CellCoordinate | null;
+  sourceCellPicking?: boolean;
   tool?: EditorTool;
   onCellClick?: (row: number, column: number) => void;
   onRegionClick?: (areaId: string, regionId: string) => void;
@@ -73,6 +76,8 @@ export function CrosswordGrid({
   selectedAreaId,
   selectedRegionId,
   selectedWordId,
+  selectedSourceCell,
+  sourceCellPicking = false,
   tool = "select",
   onCellClick,
   onRegionClick,
@@ -114,7 +119,11 @@ export function CrosswordGrid({
   return (
     <svg
       ref={svgRef}
-      className={`crossword-grid ${readOnly ? "is-readonly" : ""}`}
+      className={[
+        "crossword-grid",
+        readOnly ? "is-readonly" : "",
+        sourceCellPicking ? "is-picking-source" : ""
+      ].join(" ")}
       viewBox={`0 0 ${crossword.columns * CELL} ${crossword.rows * CELL}`}
       role="grid"
       aria-label={`Grade de ${crossword.rows} linhas por ${crossword.columns} colunas`}
@@ -146,6 +155,7 @@ export function CrosswordGrid({
           }
           selectedRegionId={selectedRegionId}
           selectedCells={selectedCells}
+          selectedSourceCell={selectedSourceCell}
           showAnswers={showAnswers}
           showDiagonals={showDiagonals}
           answerSheet={answerSheet}
@@ -172,6 +182,7 @@ export function CrosswordGrid({
                   word={word}
                   startSide={arrow.startSide}
                   endDirection={arrow.endDirection}
+                  sourceCell={arrow.sourceCell}
                   selected={word.id === selectedWordId}
                 />
               ];
@@ -241,6 +252,7 @@ interface AreaViewProps {
   selected: boolean;
   selectedRegionId?: string | null;
   selectedCells: Set<string>;
+  selectedSourceCell?: CellCoordinate | null;
   showAnswers: boolean;
   showDiagonals: boolean;
   answerSheet: boolean;
@@ -256,6 +268,7 @@ function AreaView({
   selected,
   selectedRegionId,
   selectedCells,
+  selectedSourceCell,
   showAnswers,
   showDiagonals,
   answerSheet,
@@ -271,6 +284,10 @@ function AreaView({
   const isWordCell = selectedCells.has(
     cellKey({ row: area.row, column: area.column })
   );
+  const isSourceCell =
+    selectedSourceCell &&
+    selectedSourceCell.row === area.row &&
+    selectedSourceCell.column === area.column;
 
   return (
     <g className={`grid-area kind-${area.kind}`}>
@@ -283,6 +300,7 @@ function AreaView({
           "area-background",
           selected ? "is-selected" : "",
           isWordCell ? "is-word-selected" : "",
+          isSourceCell ? "is-source-cell" : "",
           area.letterBagSize >= 3 ? "is-letter-bag" : ""
         ].join(" ")}
       />
@@ -434,6 +452,7 @@ function ArrowView({
   word,
   startSide,
   endDirection,
+  sourceCell,
   selected
 }: {
   area: Area;
@@ -441,6 +460,7 @@ function ArrowView({
   word: Word;
   startSide: Direction;
   endDirection: Direction;
+  sourceCell?: CellCoordinate | null;
   selected: boolean;
 }) {
   const width = area.columnSpan * CELL;
@@ -465,13 +485,21 @@ function ArrowView({
     right: area.column * CELL + rectangle.right * width,
     bottom: area.row * CELL + rectangle.bottom * height
   };
-  const path = arrowPointsFromClue(
-    startSide,
-    endDirection,
-    clueBounds,
-    cellBounds,
-    regionCenter
-  )
+  const points = sourceCell
+    ? arrowPointsInCell(
+        startSide,
+        endDirection,
+        cellBounds,
+        sourceAlignmentFromClue(startSide, clueBounds, cellBounds)
+      )
+    : arrowPointsFromClue(
+        startSide,
+        endDirection,
+        clueBounds,
+        cellBounds,
+        regionCenter
+      );
+  const path = points
     .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
     .join(" ");
   return (
@@ -481,6 +509,27 @@ function ArrowView({
       markerEnd="url(#arrow-head)"
     />
   );
+}
+
+function sourceAlignmentFromClue(
+  startSide: Direction,
+  clueBounds: { left: number; top: number; right: number; bottom: number },
+  cellBounds: { left: number; top: number; right: number; bottom: number }
+): Point {
+  const clueCenter = {
+    x: clueBounds.left + (clueBounds.right - clueBounds.left) / 2,
+    y: clueBounds.top + (clueBounds.bottom - clueBounds.top) / 2
+  };
+  if (startSide === "left" || startSide === "right") {
+    return {
+      x: 0.5,
+      y: (clueCenter.y - cellBounds.top) / (cellBounds.bottom - cellBounds.top)
+    };
+  }
+  return {
+    x: (clueCenter.x - cellBounds.left) / (cellBounds.right - cellBounds.left),
+    y: 0.5
+  };
 }
 
 function directionVector(direction: Direction): Point {
@@ -611,8 +660,13 @@ function arrowPointsFromClue(
           ? { x: center.x, y: cellBounds.top + inset }
           : { x: center.x, y: cellBounds.bottom - inset };
 
-  return [
+  const bend =
+    startSide === "left" || startSide === "right"
+      ? { x: entry.x, y: start.y }
+      : { x: start.x, y: entry.y };
+  return compactPoints([
     start,
+    bend,
     entry,
     {
       x: clamp(
@@ -626,7 +680,19 @@ function arrowPointsFromClue(
         cellBounds.bottom - inset
       )
     }
-  ];
+  ]);
+}
+
+function compactPoints(points: Point[]): Point[] {
+  return points.filter(
+    (point, index) =>
+      index === 0 ||
+      !nearlySamePoint(point, points[index - 1])
+  );
+}
+
+function nearlySamePoint(first: Point, second: Point): boolean {
+  return Math.abs(first.x - second.x) < 0.001 && Math.abs(first.y - second.y) < 0.001;
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {

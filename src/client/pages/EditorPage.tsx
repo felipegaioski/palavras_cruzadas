@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
+import { Loader } from "../components/Loader";
 import { CrosswordGrid, DirectResponseStrip } from "../components/CrosswordGrid";
 import { ShutdownButton } from "../components/ShutdownButton";
 import { useEditorStore } from "../store/editor";
@@ -8,11 +9,13 @@ import {
   DIRECTION_LABELS,
   DIRECTIONS,
   KIND_LABELS,
+  type CellCoordinate,
   type Direction,
-  type EditorTool
+  type EditorTool,
+  type WordBankEntry
 } from "../../shared/types";
-import { wordState } from "../../shared/grid";
-import { textLikelyFits } from "../../shared/geometry";
+import { findAreaAt, wordState } from "../../shared/grid";
+import { polygonToRectangle, textLikelyFits } from "../../shared/geometry";
 import type { SplitOrientation } from "../../shared/geometry";
 
 const TOOLS: Array<{ id: EditorTool; icon: string; label: string }> = [
@@ -35,6 +38,10 @@ export function EditorPage() {
   const [zoom, setZoom] = useState(0.5);
   const [showDiagonals, setShowDiagonals] = useState(true);
   const [bankText, setBankText] = useState("");
+  const [sourceCellEnabled, setSourceCellEnabled] = useState(false);
+  const [sourceCellPicking, setSourceCellPicking] = useState(false);
+  const [sourceCell, setSourceCell] = useState<CellCoordinate | null>(null);
+  const [sourceCellError, setSourceCellError] = useState("");
   const state = useEditorStore();
 
   useEffect(() => {
@@ -106,7 +113,11 @@ export function EditorPage() {
   }, []);
 
   if (loading) {
-    return <main className="loading-page">Preparando o editor...</main>;
+    return (
+      <main className="loading-page">
+        <Loader label="Preparando o editor..." size="lg" fullPage />
+      </main>
+    );
   }
   if (loadError || !state.crossword) {
     return (
@@ -126,6 +137,43 @@ export function EditorPage() {
   const selectedArea = crossword.areas.find(
     (area) => area.id === state.selectedAreaId
   );
+  const selectedRegion = selectedArea?.clueRegions.find(
+    (region) => region.id === state.selectedRegionId
+  ) ?? selectedArea?.clueRegions[0];
+
+  const handleGridCellClick = (row: number, column: number) => {
+    if (!sourceCellPicking) {
+      state.applyToolAt(row, column);
+      return;
+    }
+    if (
+      !selectedArea ||
+      !selectedRegion ||
+      !sourceCellIsAdjacentToRegion(selectedArea, selectedRegion.polygon, {
+        row,
+        column
+      })
+    ) {
+      setSourceCellError(
+        "Escolha uma celula adjacente ao enunciado selecionado."
+      );
+      return;
+    }
+    const areaAtCell = findAreaAt(crossword.areas, row, column);
+    if (
+      !areaAtCell ||
+      areaAtCell.kind === "clue" ||
+      areaAtCell.rowSpan > 1 ||
+      areaAtCell.columnSpan > 1
+    ) {
+      setSourceCellError("A celula de saida precisa ser uma celula simples.");
+      return;
+    }
+    setSourceCell({ row, column });
+    setSourceCellEnabled(true);
+    setSourceCellPicking(false);
+    setSourceCellError("");
+  };
 
   const resize = () => {
     const rows = Number(
@@ -295,11 +343,13 @@ export function EditorPage() {
                 selectedAreaId={state.selectedAreaId}
                 selectedRegionId={state.selectedRegionId}
                 selectedWordId={state.selectedWordId}
+                selectedSourceCell={sourceCell}
+                sourceCellPicking={sourceCellPicking}
                 tool={state.tool}
                 showDiagonals={
                   crossword.kind === "diagonalless" ? showDiagonals : true
                 }
-                onCellClick={state.applyToolAt}
+                onCellClick={handleGridCellClick}
                 onRegionClick={state.selectArea}
                 onMoveDivider={state.moveRegionDivider}
               />
@@ -323,7 +373,20 @@ export function EditorPage() {
             </button>
           </div>
           {sideTab === "properties" ? (
-            <PropertiesPanel selectedArea={selectedArea} />
+            <PropertiesPanel
+              selectedArea={selectedArea}
+              sourceCell={sourceCell}
+              sourceCellEnabled={sourceCellEnabled}
+              sourceCellPicking={sourceCellPicking}
+              sourceCellError={sourceCellError}
+              onSourceCellEnabledChange={(enabled) => {
+                setSourceCellEnabled(enabled);
+                if (!enabled) setSourceCell(null);
+              }}
+              onSourceCellChange={setSourceCell}
+              onSourceCellPickingChange={setSourceCellPicking}
+              onSourceCellErrorChange={setSourceCellError}
+            />
           ) : (
             <WordsPanel />
           )}
@@ -350,12 +413,71 @@ export function EditorPage() {
   );
 }
 
+function sourceCellIsAdjacentToRegion(
+  area: NonNullable<ReturnType<typeof useEditorStore.getState>["crossword"]>["areas"][number],
+  polygon: Array<{ x: number; y: number }>,
+  cell: CellCoordinate
+): boolean {
+  const rectangle = polygonToRectangle(polygon);
+  if (!rectangle) return false;
+  const bounds = {
+    left: area.column + rectangle.left * area.columnSpan,
+    right: area.column + rectangle.right * area.columnSpan,
+    top: area.row + rectangle.top * area.rowSpan,
+    bottom: area.row + rectangle.bottom * area.rowSpan
+  };
+  const cellBounds = {
+    left: cell.column,
+    right: cell.column + 1,
+    top: cell.row,
+    bottom: cell.row + 1
+  };
+  const verticalTouch =
+    rangesOverlap(cellBounds.top, cellBounds.bottom, bounds.top, bounds.bottom) &&
+    (nearlyEqual(cellBounds.right, bounds.left) ||
+      nearlyEqual(cellBounds.left, bounds.right));
+  const horizontalTouch =
+    rangesOverlap(cellBounds.left, cellBounds.right, bounds.left, bounds.right) &&
+    (nearlyEqual(cellBounds.bottom, bounds.top) ||
+      nearlyEqual(cellBounds.top, bounds.bottom));
+  return verticalTouch || horizontalTouch;
+}
+
+function rangesOverlap(
+  firstStart: number,
+  firstEnd: number,
+  secondStart: number,
+  secondEnd: number
+): boolean {
+  return firstStart < secondEnd && secondStart < firstEnd;
+}
+
+function nearlyEqual(first: number, second: number): boolean {
+  return Math.abs(first - second) < 0.001;
+}
+
 function PropertiesPanel({
-  selectedArea
+  selectedArea,
+  sourceCell,
+  sourceCellEnabled,
+  sourceCellPicking,
+  sourceCellError,
+  onSourceCellEnabledChange,
+  onSourceCellChange,
+  onSourceCellPickingChange,
+  onSourceCellErrorChange
 }: {
   selectedArea: ReturnType<typeof useEditorStore.getState>["crossword"] extends infer _T
     ? NonNullable<ReturnType<typeof useEditorStore.getState>["crossword"]>["areas"][number] | undefined
     : never;
+  sourceCell: CellCoordinate | null;
+  sourceCellEnabled: boolean;
+  sourceCellPicking: boolean;
+  sourceCellError: string;
+  onSourceCellEnabledChange: (enabled: boolean) => void;
+  onSourceCellChange: (cell: CellCoordinate | null) => void;
+  onSourceCellPickingChange: (picking: boolean) => void;
+  onSourceCellErrorChange: (message: string) => void;
 }) {
   const state = useEditorStore();
   const [divisionCount, setDivisionCount] = useState(2);
@@ -364,6 +486,10 @@ function PropertiesPanel({
     useState<SplitOrientation>("auto");
   const [divisionEnabled, setDivisionEnabled] = useState(false);
   const [answer, setAnswer] = useState("");
+  const [bankSearch, setBankSearch] = useState("");
+  const [bankEntries, setBankEntries] = useState<WordBankEntry[]>([]);
+  const [bankLoading, setBankLoading] = useState(false);
+  const [bankError, setBankError] = useState("");
   const [startSide, setStartSide] = useState<Direction>("right");
   const [endDirection, setEndDirection] = useState<Direction>("right");
   const [addingDirection, setAddingDirection] = useState(false);
@@ -394,6 +520,7 @@ function PropertiesPanel({
       setAnswer("");
       setStartSide("right");
       setEndDirection("right");
+      onSourceCellEnabledChange(false);
       return;
     }
 
@@ -402,6 +529,15 @@ function PropertiesPanel({
       selectedRegion?.arrows[existingWordIndex] ?? selectedRegion?.arrows[0];
     setStartSide(arrow?.startSide ?? "right");
     setEndDirection(arrow?.endDirection ?? existingWord?.direction ?? "right");
+    onSourceCellChange(arrow?.sourceCell ?? null);
+    onSourceCellPickingChange(false);
+    onSourceCellErrorChange("");
+    if (arrow?.sourceCell) {
+      onSourceCellEnabledChange(true);
+      onSourceCellPickingChange(false);
+    } else {
+      onSourceCellEnabledChange(false);
+    }
   }, [
     addingDirection,
     selectedRegion?.id,
@@ -420,6 +556,43 @@ function PropertiesPanel({
     setDivisionTexts(["", ""]);
     setDivisionOrientation("auto");
   }, [selectedArea?.id]);
+
+  const loadBankEntries = async (term = bankSearch) => {
+    setBankLoading(true);
+    try {
+      setBankEntries(await api.listWordBank(term));
+      setBankError("");
+    } catch (requestError) {
+      setBankError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Nao foi possivel carregar o banco de palavras."
+      );
+    } finally {
+      setBankLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedArea?.kind !== "clue") return;
+    const timer = window.setTimeout(() => void loadBankEntries(bankSearch), 200);
+    return () => window.clearTimeout(timer);
+  }, [bankSearch, selectedArea?.kind]);
+
+  const saveAnswerToBank = async () => {
+    if (!answer.trim()) return;
+    try {
+      await api.createWordBankEntry(answer);
+      setBankSearch(answer.trim());
+      await loadBankEntries(answer.trim());
+    } catch (requestError) {
+      setBankError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Nao foi possivel salvar a palavra."
+      );
+    }
+  };
 
   if (!selectedArea) {
     return (
@@ -659,6 +832,43 @@ function PropertiesPanel({
                 }
               />
             </label>
+            <div className="word-bank-picker">
+              <div className="word-bank-picker-heading">
+                <strong>Banco de palavras</strong>
+                <button
+                  type="button"
+                  onClick={() => void saveAnswerToBank()}
+                  disabled={!answer.trim()}
+                >
+                  Salvar resposta
+                </button>
+              </div>
+              <input
+                value={bankSearch}
+                onChange={(event) => setBankSearch(event.target.value)}
+                placeholder="Pesquisar palavra salva"
+              />
+              {bankError && <small className="error-text">{bankError}</small>}
+              <div className="word-bank-options">
+                {bankLoading ? (
+                  <Loader label="Carregando palavras..." size="sm" />
+                ) : bankEntries.length === 0 ? (
+                  <span>Nenhuma palavra salva.</span>
+                ) : (
+                  bankEntries.slice(0, 8).map((entry) => (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      className="word-bank-option"
+                      onClick={() => setAnswer(entry.word)}
+                    >
+                      <strong>{entry.word}</strong>
+                      <small>{entry.used ? "Usada" : "Não usada"}</small>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
             <div className="form-row">
               <label>
                 Saída
@@ -691,14 +901,61 @@ function PropertiesPanel({
                 </select>
               </label>
             </div>
+            <label className="division-toggle">
+              <span>
+                <strong>Celula de saida</strong>
+                <small>
+                  {sourceCellEnabled && sourceCell
+                    ? `Linha ${sourceCell.row + 1}, coluna ${sourceCell.column + 1}`
+                    : sourceCellPicking
+                      ? "Clique na grade"
+                      : "Automatica"}
+                </small>
+              </span>
+              <input
+                type="checkbox"
+                checked={sourceCellEnabled}
+                onChange={(event) => {
+                  const enabled = event.target.checked;
+                  onSourceCellEnabledChange(enabled);
+                  onSourceCellPickingChange(enabled);
+                  onSourceCellErrorChange(
+                    enabled
+                      ? "Clique na grade para escolher a celula de saida."
+                      : ""
+                  );
+                }}
+              />
+            </label>
+            {sourceCellEnabled && (
+              <div className="source-cell-picker">
+                <span>{sourceCellError}</span>
+                {sourceCell && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSourceCellChange(null);
+                      onSourceCellPickingChange(true);
+                      onSourceCellErrorChange(
+                        "Clique na grade para escolher a celula de saida."
+                      );
+                    }}
+                  >
+                    Escolher outra celula
+                  </button>
+                )}
+              </div>
+            )}
             <button
               className="primary-button full"
+              disabled={sourceCellEnabled && !sourceCell}
               onClick={() => {
                 state.upsertWord(
                   selectedRegion.id,
                   answer,
                   startSide,
                   endDirection,
+                  sourceCellEnabled ? sourceCell : null,
                   existingWord?.id
                 );
                 setAddingDirection(false);

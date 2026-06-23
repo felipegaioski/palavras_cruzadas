@@ -5,6 +5,7 @@ import {
   arrows as arrowsTable,
   clueRegions as clueRegionsTable,
   crosswords as crosswordsTable,
+  wordBankEntries as wordBankEntriesTable,
   words as wordsTable
 } from "./db/schema.js";
 import { createEmptyAreas } from "../shared/grid.js";
@@ -17,6 +18,7 @@ import type {
   Crossword,
   CrosswordKind,
   CrosswordSummary,
+  WordBankEntry,
   Direction,
   Point,
   Word
@@ -24,6 +26,10 @@ import type {
 import { validateCrossword, validateDimensions } from "../shared/validation.js";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+function normalizeBankWord(word: string): string {
+  return word.trim().toLocaleUpperCase("pt-BR");
+}
 
 export function listCrosswords(search = ""): CrosswordSummary[] {
   const rows = db
@@ -35,7 +41,8 @@ export function listCrosswords(search = ""): CrosswordSummary[] {
       rows: crosswordsTable.rows,
       columns: crosswordsTable.columns,
       updatedAt: crosswordsTable.updatedAt,
-      wordCount: sql<number>`count(${wordsTable.id})`
+      wordCount: sql<number>`count(${wordsTable.id})`,
+      answers: sql<string>`coalesce(group_concat(${wordsTable.answer}, ' '), '')`
     })
     .from(crosswordsTable)
     .leftJoin(wordsTable, eq(wordsTable.crosswordId, crosswordsTable.id))
@@ -44,13 +51,119 @@ export function listCrosswords(search = ""): CrosswordSummary[] {
     .all();
 
   const needle = search.trim().toLocaleLowerCase("pt-BR");
-  return rows
-    .filter((row) => !needle || row.title.toLocaleLowerCase("pt-BR").includes(needle))
-    .map((row) => ({
+  const filteredRows = rows
+    .filter(
+      (row) =>
+        !needle ||
+        row.title.toLocaleLowerCase("pt-BR").includes(needle) ||
+        row.answers.toLocaleLowerCase("pt-BR").includes(needle)
+    );
+  const crosswordIds = filteredRows.map((row) => row.id);
+  const previewRows = crosswordIds.length
+    ? db
+        .select({
+          crosswordId: areasTable.crosswordId,
+          clientId: areasTable.clientId,
+          kind: areasTable.kind,
+          row: areasTable.row,
+          column: areasTable.column,
+          rowSpan: areasTable.rowSpan,
+          columnSpan: areasTable.columnSpan,
+          content: areasTable.content,
+          diagonal: areasTable.diagonal,
+          letterBagSize: areasTable.letterBagSize
+        })
+        .from(areasTable)
+        .where(inArray(areasTable.crosswordId, crosswordIds))
+        .orderBy(asc(areasTable.row), asc(areasTable.column))
+        .all()
+    : [];
+  const previewByCrossword = new Map<number, CrosswordSummary["previewAreas"]>();
+  for (const area of previewRows) {
+    const current = previewByCrossword.get(area.crosswordId) ?? [];
+    if (area.row < 6) {
+      current.push({
+        id: area.clientId,
+        kind: area.kind as Area["kind"],
+        row: area.row,
+        column: area.column,
+        rowSpan: area.rowSpan,
+        columnSpan: area.columnSpan,
+        content: area.content,
+        diagonal: area.diagonal as Area["diagonal"],
+        letterBagSize: area.letterBagSize ?? 0
+      });
+    }
+    previewByCrossword.set(area.crosswordId, current);
+  }
+  return filteredRows.map((row) => ({
       ...row,
       kind: row.kind as CrosswordKind,
-      wordCount: Number(row.wordCount)
+      wordCount: Number(row.wordCount),
+      previewAreas: previewByCrossword.get(row.id) ?? []
     }));
+}
+
+export function listWordBankEntries(search = ""): WordBankEntry[] {
+  const needle = normalizeBankWord(search);
+  const usedWords = new Set(
+    db
+      .select({ answer: wordsTable.answer })
+      .from(wordsTable)
+      .all()
+      .map((row) => normalizeBankWord(row.answer))
+      .filter(Boolean)
+  );
+
+  return db
+    .select()
+    .from(wordBankEntriesTable)
+    .orderBy(asc(wordBankEntriesTable.word))
+    .all()
+    .filter((entry) => !needle || entry.word.includes(needle))
+    .map((entry) => ({
+      id: entry.id,
+      word: entry.word,
+      used: usedWords.has(entry.word),
+      createdAt: entry.createdAt
+    }));
+}
+
+export function createWordBankEntry(word: string): WordBankEntry {
+  const normalized = normalizeBankWord(word);
+  if (!normalized) throw new Error("Informe uma palavra.");
+
+  const existing = db
+    .select()
+    .from(wordBankEntriesTable)
+    .where(eq(wordBankEntriesTable.word, normalized))
+    .get();
+
+  if (!existing) {
+    db.insert(wordBankEntriesTable)
+      .values({
+        word: normalized,
+        createdAt: new Date().toISOString()
+      })
+      .run();
+  }
+
+  const saved = db
+    .select()
+    .from(wordBankEntriesTable)
+    .where(eq(wordBankEntriesTable.word, normalized))
+    .get();
+
+  if (!saved) throw new Error("Nao foi possivel salvar a palavra.");
+  return listWordBankEntries(normalized).find((entry) => entry.id === saved.id)!;
+}
+
+export function deleteWordBankEntry(id: number): void {
+  const result = db
+    .delete(wordBankEntriesTable)
+    .where(eq(wordBankEntriesTable.id, id))
+    .run();
+  if (!result.changes) throw new Error("Palavra nao encontrada.");
 }
 
 export function createCrossword(input: CreateCrosswordInput): Crossword {
@@ -144,7 +257,11 @@ export function getCrossword(id: number): Crossword {
             id: arrow.clientId,
             startSide: arrow.startSide as Direction,
             endDirection: arrow.endDirection as Direction,
-            position: arrow.position
+            position: arrow.position,
+            sourceCell:
+              arrow.sourceRow === null || arrow.sourceColumn === null
+                ? null
+                : { row: arrow.sourceRow, column: arrow.sourceColumn }
           })
         )
     };
@@ -273,6 +390,8 @@ function persistChildren(
               clueRegionId: insertedRegion.id,
               startSide: arrow.startSide,
               endDirection: arrow.endDirection,
+              sourceRow: arrow.sourceCell?.row ?? null,
+              sourceColumn: arrow.sourceCell?.column ?? null,
               position: arrowPosition
             }))
           )

@@ -50,6 +50,8 @@ export const arrows = sqliteTable("arrows", {
     .references(() => clueRegions.id, { onDelete: "cascade" }),
   startSide: text("start_side").notNull(),
   endDirection: text("end_direction").notNull(),
+  sourceRow: integer("source_row"),
+  sourceColumn: integer("source_column"),
   position: integer("position").notNull()
 });
 
@@ -65,4 +67,10 @@ export const words = sqliteTable("words", {
   answer: text("answer").notNull().default(""),
   cells: text("cells").notNull(),
   direction: text("direction").notNull()
+});
+
+export const wordBankEntries = sqliteTable("word_bank_entries", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  word: text("word").notNull().unique(),
+  createdAt: text("created_at").notNull()
 });

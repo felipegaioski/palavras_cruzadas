@@ -3,16 +3,19 @@ import { makeId } from "../src/shared/ids";
 import { sqlite } from "../src/server/db/client";
 import {
   createCrossword,
+  createWordBankEntry,
   deleteCrossword,
   duplicateCrossword,
   getCrossword,
   listCrosswords,
+  listWordBankEntries,
   saveCrossword
 } from "../src/server/repository";
 
 describe("persistência SQLite", () => {
   beforeEach(() => {
     sqlite.exec("DELETE FROM crosswords");
+    sqlite.exec("DELETE FROM word_bank_entries");
   });
 
   it("cria, salva e recupera todos os elementos", () => {
@@ -97,5 +100,44 @@ describe("persistência SQLite", () => {
     expect(listCrosswords()).toHaveLength(2);
     deleteCrossword(created.id);
     expect(listCrosswords()).toHaveLength(1);
+  });
+
+  it("salva palavras no banco global e indica uso em cruzadas", () => {
+    const entry = createWordBankEntry("brasil");
+    expect(entry.word).toBe("BRASIL");
+    expect(entry.used).toBe(false);
+
+    const created = createCrossword({
+      title: "Com banco",
+      kind: "direct",
+      rows: 5,
+      columns: 5
+    });
+    const clueArea = created.areas[0];
+    clueArea.kind = "clue";
+    clueArea.clueRegions = [
+      {
+        id: makeId("region"),
+        content: "Pais",
+        isThematic: false,
+        answerLength: 0,
+        polygon: generatePolygons(["Pais"])[0],
+        arrows: []
+      }
+    ];
+    created.words = [
+      {
+        id: makeId("word"),
+        clueRegionId: clueArea.clueRegions[0].id,
+        answer: "BRASIL",
+        direction: "right",
+        cells: []
+      }
+    ];
+    saveCrossword(created.id, created);
+
+    expect(listWordBankEntries("bra")).toEqual([
+      expect.objectContaining({ word: "BRASIL", used: true })
+    ]);
   });
 });
