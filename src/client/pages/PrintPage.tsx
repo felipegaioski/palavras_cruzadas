@@ -205,7 +205,7 @@ export function PrintPage() {
                   <article
                     className={`print-crossword ${
                       mode === "answer" ? "is-answer" : ""
-                    }`}
+                    } mode-${crossword.kind}`}
                     key={crossword.id}
                   >
                     {mode === "activity" && (

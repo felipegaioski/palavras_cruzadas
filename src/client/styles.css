@@ -381,10 +381,15 @@ legend {
   display: flex;
   align-items: end;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .search-field {
   min-width: min(300px, 44vw);
+}
+
+.library-actions label:not(.search-field) {
+  min-width: 150px;
 }
 
 .crossword-cards {
@@ -458,6 +463,29 @@ legend {
   align-items: center;
   gap: 8px;
   margin-top: 18px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.pagination button {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  padding: 8px 14px;
+  font-weight: 800;
+}
+
+.pagination span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .card-actions button:not(.primary-button),
@@ -1361,6 +1389,16 @@ legend {
   break-inside: avoid;
 }
 
+.print-crossword.mode-thematic,
+.print-crossword.mode-directresponse {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.print-crossword.mode-diagonalless,
+.print-crossword.mode-letterbag {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
 .print-crossword.is-answer {
   grid-template-rows: minmax(0, 1fr);
 }
@@ -1380,6 +1418,14 @@ legend {
   padding-bottom: 2mm;
 }
 
+.print-crossword.mode-thematic > header,
+.print-crossword.mode-diagonalless > header,
+.print-crossword.mode-directresponse > header,
+.print-crossword.mode-letterbag > header {
+  margin-bottom: 2mm;
+  padding-bottom: 1.2mm;
+}
+
 .print-crossword > header span {
   font-size: 7pt;
   font-weight: 800;
@@ -1393,9 +1439,9 @@ legend {
 }
 
 .printed-theme {
-  margin: -2mm 0 3mm;
+  margin: -1mm 0 2mm;
   font-family: Arial, sans-serif;
-  font-size: 10pt;
+  font-size: 9pt;
   font-weight: 700;
   line-height: 1.25;
 }
@@ -1409,6 +1455,40 @@ legend {
   max-width: 100%;
   max-height: 100%;
   margin: auto;
+}
+
+.print-crossword.mode-directresponse .direct-response-strip {
+  gap: 3px;
+  margin-bottom: 2mm;
+}
+
+.print-crossword.mode-directresponse .direct-response-slot {
+  width: 7.5mm;
+  height: 9mm;
+  grid-template-rows: 2.4mm 1fr;
+}
+
+.print-crossword.mode-directresponse .direct-response-slot span {
+  font-size: 6pt;
+}
+
+.print-crossword.mode-directresponse .direct-response-slot strong {
+  width: 7mm;
+  height: 6mm;
+  font-size: 10pt;
+}
+
+.per-page-2 .print-crossword.mode-directresponse .direct-response-slot,
+.per-page-4 .print-crossword.mode-directresponse .direct-response-slot {
+  width: 6mm;
+  height: 7.5mm;
+}
+
+.per-page-2 .print-crossword.mode-directresponse .direct-response-slot strong,
+.per-page-4 .print-crossword.mode-directresponse .direct-response-slot strong {
+  width: 5.5mm;
+  height: 5mm;
+  font-size: 8pt;
 }
 
 .printed-bank {
