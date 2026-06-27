@@ -901,6 +901,7 @@ legend {
     display: flex;
     align-items: center;
     gap: 5px;
+    flex-wrap: wrap;
 }
 
 .zoom-controls button {
@@ -912,11 +913,66 @@ legend {
     font-weight: 800;
 }
 
+.zoom-options-toggle {
+    min-width: auto !important;
+    padding: 0 10px;
+}
+
 .zoom-controls span {
     min-width: 48px;
     color: var(--muted);
     font-size: 0.78rem;
     text-align: center;
+}
+
+.zoom-default-picker {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.zoom-default-panel {
+    display: inline-flex;
+    max-width: 0;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateX(-10px);
+    pointer-events: none;
+    transition:
+        max-width 180ms ease,
+        opacity 140ms ease,
+        transform 180ms ease,
+        margin-left 180ms ease;
+    white-space: nowrap;
+}
+
+.zoom-default-panel.is-open {
+    max-width: 220px;
+    margin-left: 8px;
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
+.zoom-default-picker span {
+    min-width: 0;
+}
+
+.zoom-default-picker select {
+    min-height: 36px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: white;
+    padding: 0 10px;
+    font: inherit;
+    font-weight: 700;
+    color: var(--ink);
 }
 
 .grid-scroll {

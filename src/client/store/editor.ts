@@ -361,6 +361,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           }
         }
       } else if (state.tool === "diagonal") {
+        if (current.kind === "empty") {
+          current.kind = "answer";
+          current.directResponseNumber = null;
+          current.letterBagSize = 0;
+          current.clueRegions = [];
+        }
         if (current.kind !== "answer") {
           throw new Error("A diagonal só pode ser usada em uma resposta.");
         }
