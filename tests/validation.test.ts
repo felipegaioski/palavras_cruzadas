@@ -52,6 +52,7 @@ describe("validação", () => {
           content: "Primeira",
           isThematic: false,
           answerLength: 0,
+          textScale: 100,
           polygon: FULL_POLYGON,
           arrows: []
         },
@@ -60,6 +61,7 @@ describe("validação", () => {
           content: "Segunda",
           isThematic: false,
           answerLength: 0,
+          textScale: 100,
           polygon: FULL_POLYGON,
           arrows: []
         }

@@ -9,10 +9,12 @@ export function WordBankPage() {
   const [search, setSearch] = useState("");
   const [word, setWord] = useState("");
   const [loading, setLoading] = useState(true);
+  const [searchBusy, setSearchBusy] = useState(false);
   const [error, setError] = useState("");
 
   const load = async (term = search) => {
     try {
+      if (!loading) setSearchBusy(true);
       setItems(await api.listWordBank(term));
       setError("");
     } catch (requestError) {
@@ -23,6 +25,7 @@ export function WordBankPage() {
       );
     } finally {
       setLoading(false);
+      setSearchBusy(false);
     }
   };
 
@@ -75,24 +78,24 @@ export function WordBankPage() {
       </header>
 
       <section className="word-bank-tools">
-        <label>
-          Buscar
+        <label className={searchBusy ? "is-busy" : ""}>
+        Buscar
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Digite parte da palavra"
-          />
+        />
         </label>
         <label>
-          Nova palavra
-          <input
+        Nova palavra
+        <input
             value={word}
             onChange={(event) => setWord(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter") void addWord();
+            if (event.key === "Enter") void addWord();
             }}
-            placeholder="Ex.: BRASIL"
-          />
+            placeholder="Digite a palavra"
+        />
         </label>
         <button className="primary-button" onClick={() => void addWord()}>
           Salvar palavra

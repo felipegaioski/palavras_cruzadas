@@ -38,6 +38,7 @@ export const clueRegions = sqliteTable("clue_regions", {
   content: text("content").notNull().default(""),
   isThematic: integer("is_thematic", { mode: "boolean" }).notNull().default(false),
   answerLength: integer("answer_length").notNull().default(0),
+  textScale: integer("text_scale").notNull().default(100),
   polygon: text("polygon").notNull(),
   position: integer("position").notNull()
 });

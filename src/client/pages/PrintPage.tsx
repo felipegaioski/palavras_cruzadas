@@ -10,7 +10,7 @@ import {
 
 type PrintMode = "activity" | "answer";
 type Orientation = "portrait" | "landscape";
-type PerPage = 1 | 2 | 4;
+type PerPage = 1 | 2 | 4 | 6 | 8 | 12;
 
 export function PrintPage() {
   const [params] = useSearchParams();
@@ -22,6 +22,7 @@ export function PrintPage() {
   const [mode, setMode] = useState<PrintMode>("activity");
   const [orientation, setOrientation] = useState<Orientation>("portrait");
   const [perPage, setPerPage] = useState<PerPage>(1);
+  const [copiesById, setCopiesById] = useState<Record<number, number>>({});
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
@@ -38,13 +39,31 @@ export function PrintPage() {
       .catch((requestError: Error) => setError(requestError.message));
   }, [selected.join(",")]);
 
+  useEffect(() => {
+    if (mode === "activity" && perPage > 4) {
+      setPerPage(4);
+    }
+  }, [mode, perPage]);
+
+  const printItems = useMemo(
+    () =>
+      crosswords.flatMap((crossword) => {
+        const copies = Math.max(1, copiesById[crossword.id] ?? 1);
+        return Array.from({ length: copies }, (_, copyIndex) => ({
+          crossword,
+          copyIndex
+        }));
+      }),
+    [crosswords, copiesById]
+  );
+
   const pages = useMemo(() => {
-    const result: Crossword[][] = [];
-    for (let index = 0; index < crosswords.length; index += perPage) {
-      result.push(crosswords.slice(index, index + perPage));
+    const result: Array<typeof printItems> = [];
+    for (let index = 0; index < printItems.length; index += perPage) {
+      result.push(printItems.slice(index, index + perPage));
     }
     return result;
-  }, [crosswords, perPage]);
+  }, [printItems, perPage]);
 
   const filteredItems = items.filter((item) =>
     item.title
@@ -88,7 +107,12 @@ export function PrintPage() {
                   .filter((item) => selected.includes(item.id))
                   .slice(0, 3)
                   .map((item) => (
-                    <span key={item.id}>{item.title}</span>
+                    <span key={item.id}>
+                      {item.title}
+                      {(copiesById[item.id] ?? 1) > 1
+                        ? ` x${copiesById[item.id]}`
+                        : ""}
+                    </span>
                   ))}
                 {selected.length > 3 && (
                   <span>+ {selected.length - 3} outras</span>
@@ -134,6 +158,28 @@ export function PrintPage() {
                           {item.columns}
                         </small>
                       </span>
+                      {selected.includes(item.id) && (
+                        <span className="print-copy-control">
+                          <small>Cópias</small>
+                          <input
+                            type="number"
+                            min={1}
+                            max={99}
+                            value={copiesById[item.id] ?? 1}
+                            onChange={(event) => {
+                              const value = Math.max(
+                                1,
+                                Math.min(99, Number(event.target.value) || 1)
+                              );
+                              setCopiesById((current) => ({
+                                ...current,
+                                [item.id]: value
+                              }));
+                            }}
+                            onClick={(event) => event.stopPropagation()}
+                          />
+                        </span>
+                      )}
                     </label>
                   ))}
                 </div>
@@ -188,26 +234,34 @@ export function PrintPage() {
                 <option value={1}>1 por página</option>
                 <option value={2}>2 por página</option>
                 <option value={4}>4 por página</option>
+                {mode === "answer" && (
+                  <>
+                    <option value={6}>6 por página</option>
+                    <option value={8}>8 por página</option>
+                    <option value={12}>12 por página</option>
+                  </>
+                )}
               </select>
             </label>
           </section>
           {error && <div className="notice error">{error}</div>}
         </aside>
 
-        <main className={`print-preview per-page-${perPage}`}>
+        <main className={`print-preview mode-${mode} per-page-${perPage}`}>
           {pages.length ? (
             pages.map((page, pageIndex) => (
               <section
                 className={`paper-page paper-${orientation}`}
                 key={pageIndex}
               >
-                {page.map((crossword) => (
+                {page.map(({ crossword, copyIndex }) => (
                   <article
                     className={`print-crossword ${
                       mode === "answer" ? "is-answer" : ""
                     } mode-${crossword.kind}`}
-                    key={crossword.id}
+                    key={`${crossword.id}-${copyIndex}`}
                   >
+                    {mode === "answer" && <h2>{crossword.title}</h2>}
                     {mode === "activity" && (
                       <header>
                         <div>

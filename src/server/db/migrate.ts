@@ -39,6 +39,7 @@ export function migrate(database: Database.Database): void {
       content TEXT NOT NULL DEFAULT '',
       is_thematic INTEGER NOT NULL DEFAULT 0,
       answer_length INTEGER NOT NULL DEFAULT 0,
+      text_scale INTEGER NOT NULL DEFAULT 100,
       polygon TEXT NOT NULL,
       position INTEGER NOT NULL
     );
@@ -92,6 +93,9 @@ export function migrate(database: Database.Database): void {
   }
   if (!clueRegionColumns.some((column) => column.name === "answer_length")) {
     database.exec("ALTER TABLE clue_regions ADD COLUMN answer_length INTEGER NOT NULL DEFAULT 0;");
+  }
+  if (!clueRegionColumns.some((column) => column.name === "text_scale")) {
+    database.exec("ALTER TABLE clue_regions ADD COLUMN text_scale INTEGER NOT NULL DEFAULT 100;");
   }
 
   const areaColumns = database

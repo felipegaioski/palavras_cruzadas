@@ -30,6 +30,7 @@ describe("renderização da grade", () => {
         content: "Resposta distante",
         isThematic: false,
         answerLength: 0,
+        textScale: 100,
         polygon: [
           { x: 0, y: 0 },
           { x: 1, y: 0 },
@@ -79,7 +80,8 @@ describe("renderização da grade", () => {
 
     const arrowPath = markup.match(/class="clue-arrow[^"]*" d="([^"]+)"/)?.[1];
     expect(arrowPath).toBeDefined();
-    expect(arrowPath).toContain("M 168");
-    expect(arrowPath).toContain("L 364 239");
+    expect(arrowPath).toContain("M 336 230");
+    expect(arrowPath).toContain("L 346 230");
+    expect(arrowPath).toContain("L 346 240");
   });
 });

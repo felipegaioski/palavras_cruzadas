@@ -490,6 +490,7 @@ function PropertiesPanel({
   const [bankEntries, setBankEntries] = useState<WordBankEntry[]>([]);
   const [bankLoading, setBankLoading] = useState(false);
   const [bankError, setBankError] = useState("");
+  const [isWordBankOpen, setIsWordBankOpen] = useState(false);
   const [startSide, setStartSide] = useState<Direction>("right");
   const [endDirection, setEndDirection] = useState<Direction>("right");
   const [addingDirection, setAddingDirection] = useState(false);
@@ -551,6 +552,11 @@ function PropertiesPanel({
   }, [selectedRegion?.id]);
 
   useEffect(() => {
+    setIsWordBankOpen(false);
+    setBankSearch("");
+  }, [selectedRegion?.id]);
+
+  useEffect(() => {
     setDivisionEnabled((selectedArea?.clueRegions.length ?? 0) > 1);
     setDivisionCount(2);
     setDivisionTexts(["", ""]);
@@ -575,9 +581,14 @@ function PropertiesPanel({
 
   useEffect(() => {
     if (selectedArea?.kind !== "clue") return;
+    if (!isWordBankOpen || !bankSearch.trim()) {
+      setBankEntries([]);
+      setBankLoading(false);
+      return;
+    }
     const timer = window.setTimeout(() => void loadBankEntries(bankSearch), 200);
     return () => window.clearTimeout(timer);
-  }, [bankSearch, selectedArea?.kind]);
+  }, [bankSearch, isWordBankOpen, selectedArea?.kind]);
 
   const saveAnswerToBank = async () => {
     if (!answer.trim()) return;
@@ -765,6 +776,33 @@ function PropertiesPanel({
               placeholder="Digite a pergunta ou definição"
             />
           </label>
+          <label>
+            Reduzir tamanho do texto
+            <div className="text-scale-control">
+              <input
+                type="range"
+                min={60}
+                max={120}
+                step={5}
+                value={selectedRegion.textScale ?? 100}
+                onChange={(event) =>
+                  state.updateRegionTextScale(
+                    selectedRegion.id,
+                    Number(event.target.value)
+                  )
+                }
+              />
+              <span>{selectedRegion.textScale ?? 100}%</span>
+              <button
+                type="button"
+                onClick={() =>
+                  state.updateRegionTextScale(selectedRegion.id, 100)
+                }
+              >
+                Padrão
+              </button>
+            </div>
+          </label>
           {!selectedRegion.isThematic && !textLikelyFits(
             selectedRegion.content,
             selectedRegion.polygon,
@@ -834,7 +872,15 @@ function PropertiesPanel({
             </label>
             <div className="word-bank-picker">
               <div className="word-bank-picker-heading">
-                <strong>Banco de palavras</strong>
+                <button
+                  type="button"
+                  className="word-bank-toggle"
+                  onClick={() => setIsWordBankOpen((value) => !value)}
+                  aria-expanded={isWordBankOpen}
+                >
+                  <strong>Banco de palavras</strong>
+                  <span>{isWordBankOpen ? "▾" : "▸"}</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => void saveAnswerToBank()}
@@ -843,31 +889,37 @@ function PropertiesPanel({
                   Salvar resposta
                 </button>
               </div>
-              <input
-                value={bankSearch}
-                onChange={(event) => setBankSearch(event.target.value)}
-                placeholder="Pesquisar palavra salva"
-              />
-              {bankError && <small className="error-text">{bankError}</small>}
-              <div className="word-bank-options">
-                {bankLoading ? (
-                  <Loader label="Carregando palavras..." size="sm" />
-                ) : bankEntries.length === 0 ? (
-                  <span>Nenhuma palavra salva.</span>
-                ) : (
-                  bankEntries.slice(0, 8).map((entry) => (
-                    <button
-                      key={entry.id}
-                      type="button"
-                      className="word-bank-option"
-                      onClick={() => setAnswer(entry.word)}
-                    >
-                      <strong>{entry.word}</strong>
-                      <small>{entry.used ? "Usada" : "Não usada"}</small>
-                    </button>
-                  ))
-                )}
-              </div>
+              {isWordBankOpen ? (
+                <>
+                  <input
+                    value={bankSearch}
+                    onChange={(event) => setBankSearch(event.target.value)}
+                    placeholder="Pesquisar palavra salva"
+                  />
+                  {bankError && <small className="error-text">{bankError}</small>}
+                  {bankSearch.trim() ? (
+                    <div className="word-bank-options">
+                      {bankLoading ? (
+                        <Loader label="Carregando palavras..." size="sm" />
+                      ) : bankEntries.length === 0 ? (
+                        <span>Nenhuma palavra encontrada.</span>
+                      ) : (
+                        bankEntries.slice(0, 8).map((entry) => (
+                          <button
+                            key={entry.id}
+                            type="button"
+                            className="word-bank-option"
+                            onClick={() => setAnswer(entry.word)}
+                          >
+                            <strong>{entry.word}</strong>
+                            <small>{entry.used ? "Usada" : "Não usada"}</small>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
             </div>
             <div className="form-row">
               <label>

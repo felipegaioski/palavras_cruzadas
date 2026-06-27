@@ -55,6 +55,7 @@ interface EditorState {
   updateAreaLetterBagSize: (areaId: string, letterBagSize: number) => void;
   updateRegionThematic: (regionId: string, isThematic: boolean) => void;
   updateRegionAnswerLength: (regionId: string, answerLength: number) => void;
+  updateRegionTextScale: (regionId: string, textScale: number) => void;
   divideArea: (
     areaId: string,
     contents: string[],
@@ -132,6 +133,7 @@ function regionForArea(area: Area) {
     content: area.content,
     isThematic: false,
     answerLength: 0,
+    textScale: 100,
     polygon: FULL_POLYGON.map((point) => ({ ...point })),
     arrows: []
   };
@@ -160,6 +162,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       area.clueRegions.forEach((region) => {
         region.isThematic ??= false;
         region.answerLength ??= 0;
+        region.textScale ??= 100;
       });
       if (
         area.clueRegions.length > 1 &&
@@ -497,6 +500,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         content,
         isThematic: false,
         answerLength: 0,
+        textScale: 100,
         polygon: polygons[index],
         arrows: []
       }));
@@ -575,6 +579,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         .find((item) => item.id === regionId);
       if (!region) return;
       region.answerLength = Math.max(0, Math.min(99, Math.floor(answerLength)));
+    }),
+
+  updateRegionTextScale: (regionId, textScale) =>
+    commit(set, (draft) => {
+      const region = draft.areas
+        .flatMap((area) => area.clueRegions)
+        .find((item) => item.id === regionId);
+      if (!region) return;
+      region.textScale = Math.max(60, Math.min(120, Math.floor(textScale)));
     }),
 
   upsertWord: (regionId, answer, startSide, endDirection, sourceCell, wordId) =>

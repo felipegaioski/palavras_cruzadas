@@ -124,7 +124,7 @@ export function CrosswordGrid({
         readOnly ? "is-readonly" : "",
         sourceCellPicking ? "is-picking-source" : ""
       ].join(" ")}
-      viewBox={`0 0 ${crossword.columns * CELL} ${crossword.rows * CELL}`}
+      viewBox={`-1 -1 ${crossword.columns * CELL + 2} ${crossword.rows * CELL + 2}`}
       role="grid"
       aria-label={`Grade de ${crossword.rows} linhas por ${crossword.columns} colunas`}
       onPointerDown={handleGridPointer}
@@ -132,14 +132,14 @@ export function CrosswordGrid({
       <defs>
         <marker
           id="arrow-head"
-          markerWidth="8"
-          markerHeight="8"
-          refX="6"
-          refY="3"
+          markerWidth="6"
+          markerHeight="6"
+          refX="5"
+          refY="2.5"
           orient="auto"
-          markerUnits="strokeWidth"
+          markerUnits="userSpaceOnUse"
         >
-          <path d="M0,0 L0,6 L7,3 z" fill="currentColor" />
+          <path d="M0,0 L0,5 L6,2.5 z" fill="currentColor" />
         </marker>
       </defs>
 
@@ -182,7 +182,6 @@ export function CrosswordGrid({
                   word={word}
                   startSide={arrow.startSide}
                   endDirection={arrow.endDirection}
-                  sourceCell={arrow.sourceCell}
                   selected={word.id === selectedWordId}
                 />
               ];
@@ -354,6 +353,11 @@ function AreaView({
               >
                 <div
                   className={`clue-text ${region.isThematic ? "is-thematic" : ""}`}
+                  style={
+                    {
+                      "--clue-text-size": `${9 * ((region.textScale ?? 100) / 100)}px`
+                    } as React.CSSProperties
+                  }
                   title={region.isThematic ? "Temática" : region.content}
                 >
                   {region.isThematic ? "*" : region.content || "Enunciado"}
@@ -452,7 +456,6 @@ function ArrowView({
   word,
   startSide,
   endDirection,
-  sourceCell,
   selected
 }: {
   area: Area;
@@ -460,7 +463,6 @@ function ArrowView({
   word: Word;
   startSide: Direction;
   endDirection: Direction;
-  sourceCell?: CellCoordinate | null;
   selected: boolean;
 }) {
   const width = area.columnSpan * CELL;
@@ -475,30 +477,18 @@ function ArrowView({
     right: (firstCell.column + 1) * CELL,
     bottom: (firstCell.row + 1) * CELL
   };
-  const regionCenter = {
-    x: (rectangle.left + rectangle.right) / 2,
-    y: (rectangle.top + rectangle.bottom) / 2
-  };
   const clueBounds = {
     left: area.column * CELL + rectangle.left * width,
     top: area.row * CELL + rectangle.top * height,
     right: area.column * CELL + rectangle.right * width,
     bottom: area.row * CELL + rectangle.bottom * height
   };
-  const points = sourceCell
-    ? arrowPointsInCell(
-        startSide,
-        endDirection,
-        cellBounds,
-        sourceAlignmentFromClue(startSide, clueBounds, cellBounds)
-      )
-    : arrowPointsFromClue(
-        startSide,
-        endDirection,
-        clueBounds,
-        cellBounds,
-        regionCenter
-      );
+  const points = arrowPointsInCell(
+    startSide,
+    endDirection,
+    cellBounds,
+    sourceAlignmentFromClue(startSide, clueBounds, cellBounds)
+  );
   const path = points
     .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
     .join(" ");
@@ -551,9 +541,9 @@ function arrowPointsInCell(
   bounds: { left: number; top: number; right: number; bottom: number },
   alignment: Point
 ): Point[] {
-  const inset = 7;
-  const leg = 16;
-  const straightLength = 22;
+  const inset = 6;
+  const leg = 10;
+  const straightLength = 12;
   const aligned = {
     x: clamp(
       bounds.left + (bounds.right - bounds.left) * alignment.x,
@@ -615,84 +605,6 @@ function arrowPointsInCell(
       )
     }
   ];
-}
-
-function arrowPointsFromClue(
-  startSide: Direction,
-  direction: Direction,
-  clueBounds: { left: number; top: number; right: number; bottom: number },
-  cellBounds: { left: number; top: number; right: number; bottom: number },
-  alignment: Point
-): Point[] {
-  const inset = 15;
-  const straightLength = 22;
-  const vector = directionVector(direction);
-  const center = {
-    x: cellBounds.left + (cellBounds.right - cellBounds.left) / 2,
-    y: cellBounds.top + (cellBounds.bottom - cellBounds.top) / 2
-  };
-  const start =
-    startSide === "left"
-      ? {
-          x: clueBounds.left,
-          y: clueBounds.top + (clueBounds.bottom - clueBounds.top) * alignment.y
-        }
-      : startSide === "right"
-        ? {
-            x: clueBounds.right,
-            y: clueBounds.top + (clueBounds.bottom - clueBounds.top) * alignment.y
-          }
-        : startSide === "up"
-          ? {
-              x: clueBounds.left + (clueBounds.right - clueBounds.left) * alignment.x,
-              y: clueBounds.top
-            }
-          : {
-              x: clueBounds.left + (clueBounds.right - clueBounds.left) * alignment.x,
-              y: clueBounds.bottom
-            };
-  const entry =
-    direction === "right"
-      ? { x: cellBounds.left + inset, y: center.y }
-      : direction === "left"
-        ? { x: cellBounds.right - inset, y: center.y }
-        : direction === "down"
-          ? { x: center.x, y: cellBounds.top + inset }
-          : { x: center.x, y: cellBounds.bottom - inset };
-
-  const bend =
-    startSide === "left" || startSide === "right"
-      ? { x: entry.x, y: start.y }
-      : { x: start.x, y: entry.y };
-  return compactPoints([
-    start,
-    bend,
-    entry,
-    {
-      x: clamp(
-        entry.x + vector.x * straightLength,
-        cellBounds.left + inset,
-        cellBounds.right - inset
-      ),
-      y: clamp(
-        entry.y + vector.y * straightLength,
-        cellBounds.top + inset,
-        cellBounds.bottom - inset
-      )
-    }
-  ]);
-}
-
-function compactPoints(points: Point[]): Point[] {
-  return points.filter(
-    (point, index) =>
-      index === 0 ||
-      !nearlySamePoint(point, points[index - 1])
-  );
-}
-
-function nearlySamePoint(first: Point, second: Point): boolean {
-  return Math.abs(first.x - second.x) < 0.001 && Math.abs(first.y - second.y) < 0.001;
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {

@@ -39,6 +39,7 @@ describe("persistência SQLite", () => {
       content,
       isThematic: index === 1,
       answerLength: index === 0 ? 1 : 5,
+      textScale: 100,
       polygon: polygons[index],
       arrows: [
         {
@@ -121,6 +122,7 @@ describe("persistência SQLite", () => {
         content: "Pais",
         isThematic: false,
         answerLength: 0,
+        textScale: 100,
         polygon: generatePolygons(["Pais"])[0],
         arrows: []
       }

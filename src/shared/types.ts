@@ -33,6 +33,7 @@ export interface ClueRegion {
   content: string;
   isThematic: boolean;
   answerLength: number;
+  textScale: number;
   polygon: Point[];
   arrows: Arrow[];
 }
