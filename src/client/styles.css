@@ -2013,7 +2013,7 @@ legend {
 .print-crossword.is-answer .clue-region polygon,
 .print-crossword.is-answer .diagonal,
 .print-crossword.is-answer .answer-clue-block {
-    stroke-width: 0.8;
+    stroke-width: 0.7;
 }
 
 .print-crossword.is-answer .answer {
