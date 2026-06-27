@@ -71,6 +71,41 @@ export function PrintPage() {
       .includes(search.trim().toLocaleLowerCase("pt-BR"))
   );
 
+  useEffect(() => {
+    const previousTitle = document.title;
+    const modeLabel = mode === "answer" ? "Gabarito" : "Cruzada";
+    const totalCopies = printItems.length;
+
+    if (!crosswords.length) {
+      document.title = "Preparar impressao | Atelie de Cruzadas";
+      return () => {
+        document.title = previousTitle;
+      };
+    }
+
+    if (crosswords.length === 1) {
+      const crossword = crosswords[0];
+      const copies = Math.max(1, copiesById[crossword.id] ?? 1);
+      document.title =
+        copies > 1
+          ? `${crossword.title} x${copies} - ${modeLabel}`
+          : `${crossword.title} - ${modeLabel}`;
+      return () => {
+        document.title = previousTitle;
+      };
+    }
+
+    const firstTitle = crosswords[0]?.title ?? "Cruzadas";
+    const remainingTitles = crosswords.length - 1;
+    document.title =
+      totalCopies > crosswords.length
+        ? `${modeLabel}s - ${firstTitle} + ${remainingTitles} (${totalCopies} copias)`
+        : `${modeLabel}s - ${firstTitle} + ${remainingTitles}`;
+    return () => {
+      document.title = previousTitle;
+    };
+  }, [copiesById, crosswords, mode, printItems.length]);
+
   return (
     <div className={`print-screen orientation-${orientation}`}>
       <header className="print-header no-print">
@@ -266,6 +301,8 @@ export function PrintPage() {
                       <header>
                         <div>
                           <span>{KIND_LABELS[crossword.kind]}</span>
+                        </div>
+                        <div>
                           <h2>{crossword.title}</h2>
                         </div>
                       </header>
