@@ -2354,3 +2354,11 @@ legend {
 .footer p {
     margin: 0;
 }
+
+.generic-button:hover {
+    border-color: #b9cec4;
+    background: var(--green-soft);
+    color: var(--green-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgb(39 92 75 / 10%);
+}

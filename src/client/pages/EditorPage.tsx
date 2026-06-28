@@ -23,7 +23,7 @@ const TOOLS: Array<{ id: EditorTool; icon: string; label: string }> = [
     { id: "answer", icon: "A", label: "Resposta" },
     { id: "clue", icon: "T", label: "Enunciado" },
     { id: "merge", icon: "▣", label: "Unir" },
-    { id: "divide", icon: "◇", label: "Dividir" },
+    // { id: "divide", icon: "◇", label: "Dividir" },
     { id: "separate", icon: "▦", label: "Separar" },
     { id: "diagonal", icon: "╱", label: "Diagonal" },
     { id: "erase", icon: "×", label: "Apagar" }
@@ -171,7 +171,7 @@ export function EditorPage() {
             })
         ) {
             setSourceCellError(
-                "Escolha uma celula adjacente ao enunciado selecionado."
+                "Escolha uma célula adjacente ao enunciado selecionado."
             );
             return;
         }
@@ -182,7 +182,7 @@ export function EditorPage() {
             areaAtCell.rowSpan > 1 ||
             areaAtCell.columnSpan > 1
         ) {
-            setSourceCellError("A celula de saida precisa ser uma celula simples.");
+            setSourceCellError("A célula de saída precisa ser uma célula simples.");
             return;
         }
         setSourceCell({ row, column });
@@ -330,11 +330,11 @@ export function EditorPage() {
                                 >
                                     +
                                 </button>
-                                <button onClick={() => setZoom(defaultZoom)} title="Restaurar zoom">
+                                <button onClick={() => setZoom(defaultZoom)} title="Restaurar zoom" className="generic-button">
                                     &#8635;
                                 </button>
                                 <button
-                                    className="zoom-options-toggle"
+                                    className="zoom-options-toggle generic-button"
                                     onClick={() => setZoomOptionsOpen((value) => !value)}
                                     title="Mostrar opções de zoom"
                                     aria-expanded={zoomOptionsOpen}
@@ -377,7 +377,7 @@ export function EditorPage() {
                                 onChange={(event) =>
                                     state.updateMetadata({ themeDescription: event.target.value })
                                 }
-                                placeholder="Ex.: Cargos da Igreja Católica"
+                                placeholder="Digite o tema"
                             />
                         </label>
                     )}
@@ -1004,13 +1004,13 @@ function PropertiesPanel({
                         </div>
                         <label className="division-toggle">
                             <span>
-                                <strong>Celula de saida</strong>
+                                <strong>Célula de saída</strong>
                                 <small>
                                     {sourceCellEnabled && sourceCell
                                         ? `Linha ${sourceCell.row + 1}, coluna ${sourceCell.column + 1}`
                                         : sourceCellPicking
                                             ? "Clique na grade"
-                                            : "Automatica"}
+                                            : "Automática"}
                                 </small>
                             </span>
                             <input
@@ -1022,7 +1022,7 @@ function PropertiesPanel({
                                     onSourceCellPickingChange(enabled);
                                     onSourceCellErrorChange(
                                         enabled
-                                            ? "Clique na grade para escolher a celula de saida."
+                                            ? "Clique na grade para escolher a célula de saída."
                                             : ""
                                     );
                                 }}
@@ -1038,11 +1038,11 @@ function PropertiesPanel({
                                             onSourceCellChange(null);
                                             onSourceCellPickingChange(true);
                                             onSourceCellErrorChange(
-                                                "Clique na grade para escolher a celula de saida."
+                                                "Clique na grade para escolher a célula de saída."
                                             );
                                         }}
                                     >
-                                        Escolher outra celula
+                                        Escolher outra célula
                                     </button>
                                 )}
                             </div>
